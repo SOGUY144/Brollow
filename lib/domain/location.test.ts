@@ -16,7 +16,7 @@ describe("pickup distance", () => {
     expect(distanceKm({ latitude: 0, longitude: 179.99 }, { latitude: 0, longitude: -179.99 })).toBeCloseTo(2.224, 2);
   });
   it("requires both coordinate fields and permits clearing both", () => {
-    const listing = { title: "Camera kit", description: "A camera with a lens and battery.", category: "electronics" as const, dailyPrice: "100", location: "London", condition: "good" as const, rules: "", availableFrom: "", availableUntil: "" };
+    const listing = { title: "Camera kit", description: "A camera with a lens and battery.", category: "tools-diy" as const, dailyPrice: "100", location: "London", condition: "good" as const, rules: "", availableFrom: "", availableUntil: "" };
     expect(validateListing({ ...listing, pickupLatitude: "51.5" }, 1).ok).toBe(false);
     expect(validateListing({ ...listing, pickupLatitude: "91", pickupLongitude: "0" }, 1).ok).toBe(false);
     const valid = validateListing({ ...listing, pickupLatitude: "0", pickupLongitude: "0" }, 1);

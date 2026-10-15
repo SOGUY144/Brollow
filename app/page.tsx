@@ -42,9 +42,9 @@ export default function HomePage() {
 
       <section id="categories" aria-labelledby="categories-title" className="scroll-mt-24 space-y-4">
         <h2 id="categories-title" className="text-xl font-semibold tracking-tight">What will you put to use?</h2>
-        <ul className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 lg:grid-cols-7">
+        <ul className="grid grid-cols-3 gap-2 sm:gap-3">
           {CATEGORIES.map((c) => (
-            <li key={c.slug} className="w-28 shrink-0 sm:w-auto">
+            <li key={c.slug}>
               <Link
                 href={`/search?category=${c.slug}`}
                 className="flex h-full flex-col items-center gap-3 rounded-2xl bg-[#eeeede] p-4 text-center transition hover:bg-brand-soft"

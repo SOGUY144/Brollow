@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/components/use-catalog";
 import { seedReviews } from "@/lib/data/seed";
 import type { ItemSummary } from "@/lib/types";
+import { isActiveCategory } from "@/lib/categories";
 
 function Section({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
   return (
@@ -35,7 +36,7 @@ export function HomeListings() {
     );
   }
 
-  const items: ItemSummary[] = catalog.status === "ready" ? catalog.data.items.filter((i) => i.status === "active") : [];
+  const items: ItemSummary[] = catalog.status === "ready" ? catalog.data.items.filter((i) => i.status === "active" && isActiveCategory(i.category)) : [];
   const recent = [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 10);
   const topRated = [...items].filter((i) => i.rating !== null).sort((a, b) => b.rating! - a.rating! || b.reviewCount - a.reviewCount).slice(0, 5);
 

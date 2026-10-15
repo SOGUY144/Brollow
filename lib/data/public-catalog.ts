@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { cacheLife } from "next/cache";
 import type { CategorySlug, Item, ItemCondition, ItemSummary, Profile, Review } from "../types";
+import { isActiveCategory } from "../categories";
 import { summarise } from "./api";
 import { SEED_PROFILES, seedItems, seedReviews } from "./seed";
 
@@ -16,7 +17,7 @@ export async function getPublicCatalog(): Promise<ItemSummary[]> {
 
   const fallback = () => {
     const profiles = new Map<string, Profile>(SEED_PROFILES.map((p) => [p.id, p]));
-    return seedItems().map((i) => summarise(i, profiles, seedReviews()));
+    return seedItems().filter((i) => isActiveCategory(i.category)).map((i) => summarise(i, profiles, seedReviews()));
   };
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -32,7 +33,7 @@ export async function getPublicCatalog(): Promise<ItemSummary[]> {
       console.warn("Public catalog fetch error:", error?.message || error);
       return fallback();
     }
-    const items: Item[] = rows.map((r) => ({
+    const items: Item[] = rows.filter((r) => isActiveCategory(r.category)).map((r) => ({
       id: r.id, ownerId: r.owner_id, title: r.title, description: r.description, category: r.category as CategorySlug,
       dailyPriceSatang: r.daily_price_satang, location: r.location, condition: r.condition as ItemCondition, rules: r.rules,
       images: r.images, availableFrom: r.available_from, availableUntil: r.available_until, status: r.status,

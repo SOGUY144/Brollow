@@ -1,5 +1,5 @@
 import type { BlockedRange, CategorySlug, ItemSummary } from "../types";
-import { categoryName, isCategory } from "../categories";
+import { categoryName, isActiveCategory, isCategory } from "../categories";
 import { checkAvailability } from "./availability";
 import { isIsoDate } from "./dates";
 import { parseQuery } from "./search-terms";
@@ -91,6 +91,7 @@ export function searchItems(items: ItemSummary[], filters: SearchFilters, blocke
 
   for (const item of items) {
     if (item.status !== "active") continue;
+    if (!isActiveCategory(item.category)) continue;
     if (filters.category && item.category !== filters.category) continue;
     if (location && !item.location.toLowerCase().includes(location)) continue;
     if (filters.minPriceSatang !== null && item.dailyPriceSatang < filters.minPriceSatang) continue;

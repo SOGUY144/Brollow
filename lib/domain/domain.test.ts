@@ -104,16 +104,17 @@ describe("search filters", () => {
     availableFrom: null, availableUntil: null, status: "active" as const, createdAt: "", owner: null,
   };
   const items: ItemSummary[] = [
-    { ...base, id: "1", title: "Canon camera", category: "cameras-photography", dailyPriceSatang: 2000, location: "Hackney, London", rating: 5, reviewCount: 2, updatedAt: "2026-10-01" },
-    { ...base, id: "2", title: "Sony camera", category: "cameras-photography", dailyPriceSatang: 3500, location: "Clifton, Bristol", rating: 4, reviewCount: 1, updatedAt: "2026-10-02" },
-    { ...base, id: "3", title: "Camera tripod", category: "cameras-photography", dailyPriceSatang: 500, location: "Islington, London", rating: null, reviewCount: 0, updatedAt: "2026-10-03" },
+    { ...base, id: "1", title: "Dome tent", category: "camping-outdoors", dailyPriceSatang: 2000, location: "Hackney, London", rating: 5, reviewCount: 2, updatedAt: "2026-10-01" },
+    { ...base, id: "2", title: "Family tent", category: "camping-outdoors", dailyPriceSatang: 3500, location: "Clifton, Bristol", rating: 4, reviewCount: 1, updatedAt: "2026-10-02" },
+    { ...base, id: "3", title: "Tent footprint", category: "camping-outdoors", dailyPriceSatang: 500, location: "Islington, London", rating: null, reviewCount: 0, updatedAt: "2026-10-03" },
     { ...base, id: "4", title: "Cordless drill", category: "tools-diy", dailyPriceSatang: 600, location: "Hackney, London", rating: 4, reviewCount: 3, updatedAt: "2026-10-04" },
+    { ...base, id: "5", title: "Old camera tent bag", category: "cameras-photography", dailyPriceSatang: 100, location: "Hackney, London", rating: 5, reviewCount: 9, updatedAt: "2026-10-05" },
   ];
   const blocked: BlockedRange[] = [{ itemId: "1", startDate: "2026-10-20", endDate: "2026-10-21" }];
 
   it("combines keyword, category, location, price and dates", () => {
     const result = searchItems(items, {
-      ...EMPTY_FILTERS, q: "camera", category: "cameras-photography", location: "london",
+      ...EMPTY_FILTERS, q: "tent", category: "camping-outdoors", location: "london",
       maxPriceSatang: 2500, start: "2026-10-21", end: "2026-10-22",
     }, blocked);
     // 1 is booked, 2 is in Bristol and too expensive, 4 is the wrong category.
@@ -122,6 +123,11 @@ describe("search filters", () => {
   it("sorts by price", () => {
     const result = searchItems(items, { ...EMPTY_FILTERS, sort: "price_asc" }, []);
     expect(result.map((i) => i.id)).toEqual(["3", "4", "1", "2"]);
+  });
+  it("hides items in categories Brollow no longer runs", () => {
+    const result = searchItems(items, { ...EMPTY_FILTERS, q: "tent" }, []);
+    expect(result.map((i) => i.id)).not.toContain("5");
+    expect(filtersFromParams(new URLSearchParams("category=cameras-photography")).category).toBeNull();
   });
   it("round-trips through URL params and drops invalid values", () => {
     const filters = { ...EMPTY_FILTERS, q: "drill", category: "tools-diy" as const, minPriceSatang: 500, start: "2026-10-20", end: "2026-10-21", sort: "rating" as const };
