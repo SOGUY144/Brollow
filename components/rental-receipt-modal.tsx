@@ -91,10 +91,7 @@ export function RentalReceiptModal({ booking, isOpen, onClose, viewerId }: Renta
             {/* Header / Brand */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-5">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-white font-bold text-sm tracking-tighter">
-                    B
-                  </span>
+                <div>
                   <span className="text-xl font-bold tracking-tight text-foreground">Brollow</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">Peer-to-Peer Rental Network · Bangkok, Thailand</p>
