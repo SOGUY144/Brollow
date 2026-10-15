@@ -80,3 +80,42 @@ export function groupMessagesByDate(
     messages: msgs,
   }));
 }
+
+export function hasUnreadMessages(
+  messages: ChatMessage[],
+  currentViewerId: string,
+  lastReadIso: string | null
+): boolean {
+  if (!messages || messages.length === 0) return false;
+
+  const lastReadTime = lastReadIso ? new Date(lastReadIso).getTime() : 0;
+
+  return messages.some((m) => {
+    if (m.senderId === currentViewerId) return false;
+    const msgTime = new Date(m.createdAt).getTime();
+    return isNaN(msgTime) ? true : msgTime > lastReadTime;
+  });
+}
+
+const READ_PREFIX = "brollow_chat_read_";
+
+export function getBookingLastRead(bookingId: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(`${READ_PREFIX}${bookingId}`);
+  } catch {
+    return null;
+  }
+}
+
+export function setBookingLastRead(bookingId: string, isoString?: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      `${READ_PREFIX}${bookingId}`,
+      isoString || new Date().toISOString()
+    );
+  } catch {
+    // Ignore storage quota or access errors
+  }
+}
