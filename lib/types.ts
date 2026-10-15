@@ -165,3 +165,13 @@ export interface Wallet {
   transactions: WalletTransaction[];
 }
 
+export interface ChatMessage {
+  id: string;
+  bookingId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: "renter" | "owner";
+  text: string;
+  createdAt: string;
+}
+
