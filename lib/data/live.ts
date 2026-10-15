@@ -348,25 +348,51 @@ export function createLiveApi(url: string, key: string): DataApi {
 
     async listMessages(bookingId: string): Promise<ChatMessage[]> {
       try {
-        const { data, error } = await sb
-          .from("messages")
-          .select("*")
-          .eq("booking_id", bookingId)
-          .order("created_at", { ascending: true });
+        const [{ data: msgs, error }, { data: booking }] = await Promise.all([
+          sb.from("messages").select("*").eq("booking_id", bookingId).order("created_at", { ascending: true }),
+          sb.from("bookings").select("id, renter_id, message, created_at").eq("id", bookingId).maybeSingle(),
+        ]);
 
-        if (error) {
+        if (error && error.code !== "42P01") {
           console.warn("Could not load remote messages:", error.message);
-          return [];
         }
-        return ((data as MessageRow[] | null) ?? []).map((r) => ({
-          id: r.id,
-          bookingId: r.booking_id,
-          senderId: r.sender_id,
-          senderName: r.sender_name ?? "User",
-          senderRole: r.sender_role,
-          text: r.text,
-          createdAt: r.created_at,
-        }));
+
+        const result: ChatMessage[] = [];
+
+        // Synthesize initial booking note if present
+        if (booking && booking.message?.trim()) {
+          const { data: renterProfile } = await sb
+            .from("profiles")
+            .select("display_name")
+            .eq("id", booking.renter_id)
+            .maybeSingle();
+
+          result.push({
+            id: `msg-init-${booking.id}`,
+            bookingId: booking.id,
+            senderId: booking.renter_id,
+            senderName: renterProfile?.display_name ?? "Renter",
+            senderRole: "renter",
+            text: booking.message.trim(),
+            createdAt: booking.created_at,
+          });
+        }
+
+        if (msgs && Array.isArray(msgs)) {
+          for (const r of msgs as MessageRow[]) {
+            result.push({
+              id: r.id,
+              bookingId: r.booking_id,
+              senderId: r.sender_id,
+              senderName: r.sender_name ?? "User",
+              senderRole: r.sender_role,
+              text: r.text,
+              createdAt: r.created_at,
+            });
+          }
+        }
+
+        return result;
       } catch (err) {
         console.warn("Error fetching messages:", err);
         return [];
@@ -385,24 +411,24 @@ export function createLiveApi(url: string, key: string): DataApi {
       const { data: booking } = await sb.from("bookings").select("renter_id, owner_id").eq("id", bookingId).maybeSingle();
       const role: "renter" | "owner" = booking?.owner_id === userId ? "owner" : "renter";
 
-      const newMsgId = `msg-${crypto.randomUUID().slice(0, 8)}`;
+      const newMsgId = crypto.randomUUID();
       const now = new Date().toISOString();
 
-      try {
-        const { error } = await sb.from("messages").insert({
-          id: newMsgId,
-          booking_id: bookingId,
-          sender_id: userId,
-          sender_name: senderName,
-          sender_role: role,
-          text: trimmed,
-          created_at: now,
-        });
-        if (error) {
-          console.warn("Could not insert message to remote table:", error.message);
+      const { error } = await sb.from("messages").insert({
+        id: newMsgId,
+        booking_id: bookingId,
+        sender_id: userId,
+        sender_name: senderName,
+        sender_role: role,
+        text: trimmed,
+        created_at: now,
+      });
+
+      if (error) {
+        if (error.code === "42P01") {
+          throw new DataError("The 'messages' table is not yet created in Supabase. Please run the SQL migration in Supabase SQL Editor.");
         }
-      } catch (err) {
-        console.warn("Error inserting message:", err);
+        fail(error, "Could not send message. Please check database permissions.");
       }
 
       return {

@@ -52,31 +52,42 @@ export function BookingChatDrawer({
   const counterpartRole = isViewerOwner ? "Renter" : "Owner";
   const counterpartName = booking.counterpart?.displayName ?? counterpartRole;
 
-  // Load message history on open or when booking changes
+  // Load message history on open and poll every 3 seconds while open
   useEffect(() => {
     if (!isOpen) return;
 
     let isMounted = true;
-    setIsLoading(true);
-    setError(null);
 
-    api
-      .listMessages(booking.id)
-      .then((data) => {
+    async function loadData(showSpinner = false) {
+      if (showSpinner) {
+        setIsLoading(true);
+        setError(null);
+      }
+      try {
+        const data = await api.listMessages(booking.id);
         if (isMounted) {
           setMessages(data);
-          setIsLoading(false);
         }
-      })
-      .catch((err) => {
-        if (isMounted) {
+      } catch (err) {
+        if (isMounted && showSpinner) {
           setError(err instanceof Error ? err.message : "Failed to load messages");
+        }
+      } finally {
+        if (isMounted && showSpinner) {
           setIsLoading(false);
         }
-      });
+      }
+    }
+
+    loadData(true);
+
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 3000);
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, [api, booking.id, isOpen]);
 
