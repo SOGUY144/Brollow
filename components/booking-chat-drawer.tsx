@@ -66,7 +66,15 @@ export function BookingChatDrawer({
       try {
         const data = await api.listMessages(booking.id);
         if (isMounted) {
-          setMessages(data);
+          setMessages((prev) => {
+            if (
+              prev.length === data.length &&
+              prev[prev.length - 1]?.id === data[data.length - 1]?.id
+            ) {
+              return prev;
+            }
+            return data;
+          });
         }
       } catch (err) {
         if (isMounted && showSpinner) {
@@ -91,12 +99,14 @@ export function BookingChatDrawer({
     };
   }, [api, booking.id, isOpen]);
 
-  // Auto-scroll to bottom whenever messages update
+  // Auto-scroll to bottom whenever messages count changes
+  const prevCountRef = useRef(0);
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && messages.length !== prevCountRef.current) {
+      prevCountRef.current = messages.length;
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isOpen]);
+  }, [messages.length, isOpen]);
 
   // Close on Escape key
   useEffect(() => {
@@ -139,9 +149,15 @@ export function BookingChatDrawer({
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+      onClick={onClose}
+    >
       <div className="absolute inset-y-0 right-0 flex max-w-full pl-10">
-        <div className="w-screen max-w-md bg-card border-l border-border shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-200">
+        <div
+          className="w-screen max-w-md bg-card border-l border-border shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="border-b p-4 bg-muted/20">
             <div className="flex items-start justify-between gap-3">

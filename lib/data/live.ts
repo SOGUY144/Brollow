@@ -409,7 +409,10 @@ export function createLiveApi(url: string, key: string): DataApi {
       const senderName = profile?.display_name ?? "User";
 
       const { data: booking } = await sb.from("bookings").select("renter_id, owner_id").eq("id", bookingId).maybeSingle();
-      const role: "renter" | "owner" = booking?.owner_id === userId ? "owner" : "renter";
+      if (!booking || (booking.renter_id !== userId && booking.owner_id !== userId)) {
+        throw new DataError("You are not a participant in this booking.");
+      }
+      const role: "renter" | "owner" = booking.owner_id === userId ? "owner" : "renter";
 
       const newMsgId = crypto.randomUUID();
       const now = new Date().toISOString();

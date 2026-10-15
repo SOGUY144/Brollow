@@ -18,10 +18,11 @@ drop policy if exists "Renter and owner view messages" on public.messages;
 create policy "Renter and owner view messages" on public.messages
   for select to authenticated
   using (
+    auth.uid() = sender_id or
     exists (
       select 1 from public.bookings b
       where b.id = messages.booking_id
-        and auth.uid() in (b.renter_id, b.owner_id)
+        and (b.renter_id = auth.uid() or b.owner_id = auth.uid())
     )
   );
 
