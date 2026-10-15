@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, CheckCircle2, FileText, Lock, RotateCcw } from "lucide-react";
+import { Camera, CheckCircle2, FileText, Lock, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { BookingRow } from "@/components/booking-row";
 import { RatingForm } from "@/components/rating-form";
 import { ReputationLine, Stars } from "@/components/reputation";
 import { errorMessage, useData } from "@/components/data-provider";
+import { BookingChatDrawer } from "@/components/booking-chat-drawer";
 import { HandoverModal } from "@/components/handover-modal";
 import { PaymentModal } from "@/components/payment-modal";
 import { RentalReceiptModal } from "@/components/rental-receipt-modal";
@@ -46,6 +47,7 @@ function Bookings() {
   const [payingBooking, setPayingBooking] = useState<BookingWithItem | null>(null);
   const [inspectingBooking, setInspectingBooking] = useState<BookingWithItem | null>(null);
   const [receiptBooking, setReceiptBooking] = useState<BookingWithItem | null>(null);
+  const [chatBooking, setChatBooking] = useState<BookingWithItem | null>(null);
 
   async function act(id: string, to: BookingStatus, details?: { pickupPhotoUrl?: string; pickupNote?: string }) {
     if (to === "cancelled" && !window.confirm("Cancel this booking?")) return;
@@ -159,6 +161,19 @@ function Bookings() {
           </Button>
         )}
 
+        {/* Chat with Owner */}
+        {b.status !== "cancelled" && b.status !== "declined" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-muted-foreground/30 text-foreground hover:bg-muted flex items-center gap-1.5"
+            onClick={() => setChatBooking(b)}
+          >
+            <MessageCircle className="size-3.5 text-primary" />
+            Chat with Owner
+          </Button>
+        )}
+
         {/* Cancel option */}
         {actions.includes("cancelled") && (
           <Button
@@ -262,6 +277,19 @@ function Bookings() {
           >
             <FileText className="size-3.5" />
             View Receipt
+          </Button>
+        )}
+
+        {/* Chat with Renter */}
+        {b.status !== "cancelled" && b.status !== "declined" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-muted-foreground/30 text-foreground hover:bg-muted flex items-center gap-1.5"
+            onClick={() => setChatBooking(b)}
+          >
+            <MessageCircle className="size-3.5 text-primary" />
+            Chat with Renter
           </Button>
         )}
 
@@ -390,6 +418,17 @@ function Bookings() {
           isOpen={!!receiptBooking}
           onClose={() => setReceiptBooking(null)}
           viewerId={viewer?.id ?? ""}
+        />
+      )}
+
+      {/* Booking Coordination Chat Drawer */}
+      {chatBooking && (
+        <BookingChatDrawer
+          booking={chatBooking}
+          currentViewerId={viewer?.id ?? ""}
+          isOpen={!!chatBooking}
+          onClose={() => setChatBooking(null)}
+          api={api}
         />
       )}
     </div>
