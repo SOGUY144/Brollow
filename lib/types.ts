@@ -54,7 +54,16 @@ export interface Review {
   isDemo: boolean;
 }
 
-export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
+export type BookingStatus =
+  | "pending"
+  | "approved"
+  | "escrow_held"
+  | "picked_up"
+  | "returned"
+  | "completed"
+  | "confirmed"
+  | "declined"
+  | "cancelled";
 
 export interface Booking {
   id: string;
@@ -68,6 +77,12 @@ export interface Booking {
   totalSatang: number;
   status: BookingStatus;
   message: string;
+  pickupPhotoUrl?: string | null;
+  pickupNote?: string | null;
+  pickedUpAt?: string | null;
+  payoutStatus?: "held" | "released" | null;
+  returnPhotoUrl?: string | null;
+  returnedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,3 +113,21 @@ export interface ListingInput {
   availableFrom: IsoDate | "";
   availableUntil: IsoDate | "";
 }
+
+export type WalletTransactionType = "deposit" | "withdrawal" | "escrow_payout" | "rental_payment";
+
+export interface WalletTransaction {
+  id: string;
+  userId: string;
+  amountSatang: number;
+  type: WalletTransactionType;
+  referenceId?: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface Wallet {
+  balanceSatang: number;
+  transactions: WalletTransaction[];
+}
+

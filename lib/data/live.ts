@@ -3,7 +3,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { photoError } from "../domain/listing";
-import type { BlockedRange, Booking, CategorySlug, Item, ItemCondition, Profile, Review } from "../types";
+import type { BlockedRange, Booking, CategorySlug, Item, ItemCondition, Profile, Review, Wallet, WalletTransaction } from "../types";
 import { DataError, summarise, type BookingWithItem, type DataApi } from "./api";
 
 /* Row shapes as stored in Postgres (see supabase/migrations). */
@@ -19,7 +19,14 @@ interface ReviewRow { id: string; item_id: string; author_name: string; rating: 
 interface BookingRow {
   id: string; item_id: string; renter_id: string; owner_id: string; start_date: string; end_date: string;
   days: number; daily_price_satang: number; total_satang: number; status: Booking["status"]; message: string;
+  pickup_photo_url?: string | null; pickup_note?: string | null; picked_up_at?: string | null;
+  payout_status?: "held" | "released" | null; return_photo_url?: string | null; returned_at?: string | null;
   created_at: string; updated_at: string;
+}
+interface WalletTxRow {
+  id: string; user_id: string; amount_satang: number;
+  type: "deposit" | "withdrawal" | "escrow_payout" | "rental_payment";
+  reference_id?: string | null; description: string; created_at: string;
 }
 
 const toItem = (r: ItemRow): Item => ({
@@ -38,6 +45,8 @@ const toReview = (r: ReviewRow): Review => ({
 const toBooking = (r: BookingRow): Booking => ({
   id: r.id, itemId: r.item_id, renterId: r.renter_id, ownerId: r.owner_id, startDate: r.start_date, endDate: r.end_date,
   days: r.days, dailyPriceSatang: r.daily_price_satang, totalSatang: r.total_satang, status: r.status, message: r.message,
+  pickupPhotoUrl: r.pickup_photo_url, pickupNote: r.pickup_note, pickedUpAt: r.picked_up_at,
+  payoutStatus: r.payout_status, returnPhotoUrl: r.return_photo_url, returnedAt: r.returned_at,
   createdAt: r.created_at, updatedAt: r.updated_at,
 });
 
@@ -157,7 +166,10 @@ export function createLiveApi(url: string, key: string): DataApi {
       const { data: auth } = await sb.auth.getUser();
       if (!auth.user) return [];
       const { data, error } = await sb.from("favorites").select("item_id");
-      if (error) fail(error, "Couldn't load your saved items.");
+      if (error) {
+        console.warn("Couldn't load your saved items:", error);
+        return [];
+      }
       return (data as { item_id: string }[]).map((r) => r.item_id);
     },
 
@@ -190,8 +202,13 @@ export function createLiveApi(url: string, key: string): DataApi {
       return bookingsWithItems(data as BookingRow[], (b) => b.renter_id);
     },
 
-    async setBookingStatus(bookingId, to) {
-      const { error } = await sb.rpc("set_booking_status", { p_booking_id: bookingId, p_status: to });
+    async setBookingStatus(bookingId, to, details) {
+      const { error } = await sb.rpc("set_booking_status", {
+        p_booking_id: bookingId,
+        p_status: to,
+        p_pickup_photo_url: details?.pickupPhotoUrl ?? null,
+        p_pickup_note: details?.pickupNote ?? null,
+      });
       if (error) fail(error, "Couldn't update the booking.");
     },
 
@@ -247,6 +264,40 @@ export function createLiveApi(url: string, key: string): DataApi {
 
     async resetDemo() {
       throw new DataError("Reset is only available in demo mode.");
+    },
+
+    async getWallet(): Promise<Wallet> {
+      try {
+        const userId = await uid();
+        const [{ data: prof }, { data: txs }] = await Promise.all([
+          sb.from("profiles").select("wallet_balance_satang").eq("id", userId).maybeSingle(),
+          sb.from("wallet_transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+        ]);
+        return {
+          balanceSatang: Number(prof?.wallet_balance_satang ?? 0),
+          transactions: ((txs as WalletTxRow[] | null) ?? []).map((t) => ({
+            id: t.id,
+            userId: t.user_id,
+            amountSatang: Number(t.amount_satang),
+            type: t.type,
+            referenceId: t.reference_id ?? undefined,
+            description: t.description,
+            createdAt: t.created_at,
+          })),
+        };
+      } catch {
+        return { balanceSatang: 0, transactions: [] };
+      }
+    },
+
+    async depositWallet(amountSatang: number): Promise<void> {
+      const { error } = await sb.rpc("deposit_wallet", { p_amount_satang: amountSatang });
+      if (error) fail(error, "Couldn't complete deposit.");
+    },
+
+    async withdrawWallet(amountSatang: number, destination: string): Promise<void> {
+      const { error } = await sb.rpc("withdraw_wallet", { p_amount_satang: amountSatang, p_destination: destination });
+      if (error) fail(error, "Couldn't complete withdrawal.");
     },
   };
 }

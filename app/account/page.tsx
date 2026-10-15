@@ -8,6 +8,7 @@ import { AccountShell } from "@/components/account-shell";
 import { errorMessage, useData } from "@/components/data-provider";
 import { Button } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
+import { WalletCard } from "@/components/wallet-card";
 
 export default function AccountPage() {
   return (
@@ -63,10 +64,15 @@ function Overview() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-xl border bg-card p-5">
-        <p className="text-lg font-medium">{viewer!.displayName}</p>
-        <p className="text-sm text-muted-foreground">{viewer!.email ?? "Demo account"}</p>
-        {mode === "live" && <Button variant="outline" className="mt-4 h-9" onClick={signOut}>Log out</Button>}
+      {/* Wallet Card (Exness/MT5 style) */}
+      <WalletCard showRecentTransactions={true} />
+
+      <div className="flex items-center justify-between rounded-xl border bg-card p-4">
+        <div>
+          <p className="text-base font-semibold">{viewer!.displayName}</p>
+          <p className="text-xs text-muted-foreground">{viewer!.email ?? "Demo account"}</p>
+        </div>
+        {mode === "live" && <Button variant="outline" size="sm" onClick={signOut}>Log out</Button>}
       </div>
 
       {stats.status === "error" && <p role="alert" className="text-sm text-destructive">{stats.message}</p>}

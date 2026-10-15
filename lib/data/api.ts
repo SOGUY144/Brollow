@@ -1,5 +1,5 @@
 import type { ValidListing } from "../domain/listing";
-import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, ItemSummary, Profile, Review } from "../types";
+import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, ItemSummary, Profile, Review, Wallet } from "../types";
 
 export type DataMode = "demo" | "live";
 
@@ -39,7 +39,11 @@ export interface DataApi {
   requestBooking(input: { itemId: string; startDate: string; endDate: string; message: string }): Promise<Booking>;
   listMyBookings(): Promise<BookingWithItem[]>;
   listIncomingRequests(): Promise<BookingWithItem[]>;
-  setBookingStatus(bookingId: string, to: BookingStatus): Promise<void>;
+  setBookingStatus(
+    bookingId: string,
+    to: BookingStatus,
+    details?: { pickupPhotoUrl?: string; pickupNote?: string; returnPhotoUrl?: string }
+  ): Promise<void>;
 
   listMyListings(): Promise<Item[]>;
   createListing(value: ValidListing, photos: File[]): Promise<Item>;
@@ -50,6 +54,10 @@ export interface DataApi {
   signUp(email: string, password: string, displayName: string): Promise<{ needsConfirmation: boolean }>;
   signOut(): Promise<void>;
   resetDemo(): Promise<void>;
+
+  getWallet(): Promise<Wallet>;
+  depositWallet(amountSatang: number): Promise<void>;
+  withdrawWallet(amountSatang: number, destination: string): Promise<void>;
 }
 
 export function summarise(item: Item, owners: Map<string, Profile>, reviews: Review[]): ItemSummary {

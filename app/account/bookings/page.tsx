@@ -1,18 +1,21 @@
 "use client";
 
+import { Camera, CheckCircle2, Lock, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AccountShell } from "@/components/account-shell";
 import { BookingRow } from "@/components/booking-row";
 import { errorMessage, useData } from "@/components/data-provider";
+import { HandoverModal } from "@/components/handover-modal";
+import { PaymentModal } from "@/components/payment-modal";
 import { Button } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
 import { allowedActions } from "@/lib/domain/bookings";
 import { todayInAppTz } from "@/lib/domain/dates";
+import type { BookingWithItem } from "@/lib/data/api";
+import { formatMoney } from "@/lib/format";
 import type { BookingStatus } from "@/lib/types";
-
-const ACTION_LABEL: Record<BookingStatus, string> = { confirmed: "Accept", declined: "Decline", cancelled: "Cancel", pending: "" };
 
 export default function BookingsPage() {
   return (
@@ -28,14 +31,31 @@ function Bookings() {
     const [mine, incoming] = await Promise.all([api.listMyBookings(), api.listIncomingRequests()]);
     return { mine, incoming, today: todayInAppTz() };
   }, [api]);
-  const [busy, setBusy] = useState<string | null>(null);
 
-  async function act(id: string, to: BookingStatus) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [payingBooking, setPayingBooking] = useState<BookingWithItem | null>(null);
+  const [inspectingBooking, setInspectingBooking] = useState<BookingWithItem | null>(null);
+
+  async function act(id: string, to: BookingStatus, details?: { pickupPhotoUrl?: string; pickupNote?: string }) {
     if (to === "cancelled" && !window.confirm("Cancel this booking?")) return;
     setBusy(id);
     try {
-      await api.setBookingStatus(id, to);
-      toast.success(to === "confirmed" ? "Request accepted" : to === "declined" ? "Request declined" : "Booking cancelled");
+      await api.setBookingStatus(id, to, details);
+      if (to === "approved" || to === "confirmed") {
+        toast.success("Rental request approved.");
+      } else if (to === "declined") {
+        toast.info("Rental request declined.");
+      } else if (to === "cancelled") {
+        toast.info("Booking cancelled.");
+      } else if (to === "escrow_held") {
+        toast.success("Payment secured in Escrow. Funds are safely held.");
+      } else if (to === "picked_up") {
+        toast.success("Inspection verified. Escrow payout released to the owner.");
+      } else if (to === "returned") {
+        toast.success("Equipment marked as returned.");
+      } else if (to === "completed") {
+        toast.success("Rental completed successfully.");
+      }
       data.reload();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -55,39 +75,236 @@ function Bookings() {
   }
 
   const { mine, incoming, today } = data.data;
-  const actionButtons = (b: (typeof mine)[number]) =>
-    allowedActions(b, viewer!.id, today).map((to) => (
-      <Button key={to} variant={to === "confirmed" ? "default" : "outline"} className="h-9" disabled={busy === b.id} onClick={() => void act(b.id, to)}>
-        {ACTION_LABEL[to]}
-      </Button>
-    ));
+
+  // Actions for Renter (viewer is renter)
+  const renterActionButtons = (b: (typeof mine)[number]) => {
+    const actions = allowedActions(b, viewer!.id, today);
+    const isBusy = busy === b.id;
+
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Step 4: Pay to Escrow (Opens Checkout Modal) */}
+        {(b.status === "approved" || b.status === "confirmed") && (
+          <Button
+            size="sm"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs flex items-center gap-1.5"
+            disabled={isBusy}
+            onClick={() => setPayingBooking(b)}
+          >
+            <Lock className="size-3.5" />
+            Pay into Escrow ({formatMoney(b.totalSatang)})
+          </Button>
+        )}
+
+        {/* Step 5: Inspect and Handover (Opens Inspection Modal) */}
+        {b.status === "escrow_held" && (
+          <Button
+            size="sm"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs flex items-center gap-1.5"
+            disabled={isBusy}
+            onClick={() => setInspectingBooking(b)}
+          >
+            <Camera className="size-3.5" />
+            Inspect & Confirm Handover
+          </Button>
+        )}
+
+        {/* Step 6: Return item */}
+        {b.status === "picked_up" && actions.includes("returned") && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-purple-300 text-purple-700 hover:bg-purple-50 flex items-center gap-1.5"
+            disabled={isBusy}
+            onClick={() => void act(b.id, "returned")}
+          >
+            <RotateCcw className="size-3.5" />
+            Return Equipment
+          </Button>
+        )}
+
+        {/* Returned status */}
+        {b.status === "returned" && (
+          <span className="text-xs text-muted-foreground italic">Returned · Awaiting owner check</span>
+        )}
+
+        {/* Completed status */}
+        {b.status === "completed" && (
+          <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+            <CheckCircle2 className="size-3.5" /> Rental Completed
+          </span>
+        )}
+
+        {/* Cancel option */}
+        {actions.includes("cancelled") && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground hover:text-destructive"
+            disabled={isBusy}
+            onClick={() => void act(b.id, "cancelled")}
+          >
+            Cancel
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  // Actions for Owner (viewer is owner)
+  const ownerActionButtons = (b: (typeof incoming)[number]) => {
+    const actions = allowedActions(b, viewer!.id, today);
+    const isBusy = busy === b.id;
+
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Approve / Decline */}
+        {b.status === "pending" && (
+          <>
+            <Button
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+              disabled={isBusy}
+              onClick={() => void act(b.id, "approved")}
+            >
+              Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isBusy}
+              onClick={() => void act(b.id, "declined")}
+            >
+              Decline
+            </Button>
+          </>
+        )}
+
+        {/* Approved: Waiting for renter to pay */}
+        {(b.status === "approved" || b.status === "confirmed") && (
+          <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md font-medium">
+            Awaiting renter payment into Escrow
+          </span>
+        )}
+
+        {/* Escrow held: Ready for pickup */}
+        {b.status === "escrow_held" && (
+          <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md font-medium">
+            <Lock className="size-3" /> Secured in Escrow · Ready for handover
+          </span>
+        )}
+
+        {/* Picked up: Active rental */}
+        {b.status === "picked_up" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-purple-300 text-purple-700 hover:bg-purple-50 flex items-center gap-1.5"
+            disabled={isBusy}
+            onClick={() => void act(b.id, "returned")}
+          >
+            <RotateCcw className="size-3.5" />
+            Mark Equipment Returned
+          </Button>
+        )}
+
+        {/* Returned: Complete rental */}
+        {b.status === "returned" && (
+          <Button
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs flex items-center gap-1.5"
+            disabled={isBusy}
+            onClick={() => void act(b.id, "completed")}
+          >
+            <CheckCircle2 className="size-3.5" />
+            Confirm Return & Complete
+          </Button>
+        )}
+
+        {/* Completed */}
+        {b.status === "completed" && (
+          <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+            <CheckCircle2 className="size-3.5" /> Rental Completed
+          </span>
+        )}
+
+        {/* Cancel option */}
+        {actions.includes("cancelled") && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground hover:text-destructive"
+            disabled={isBusy}
+            onClick={() => void act(b.id, "cancelled")}
+          >
+            Cancel
+          </Button>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-10">
       {mode === "demo" && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-          Demo mode: requests and decisions are simulated and stored in this browser. No payment is taken and no real reservation is made.
+          Demo mode: requests and decisions are simulated and stored in this browser. No real payment is taken.
         </p>
       )}
 
       <section aria-labelledby="mine-title" className="space-y-3">
-        <h2 id="mine-title" className="text-lg font-semibold">Your rental requests</h2>
+        <h2 id="mine-title" className="text-lg font-semibold">Your Rental Requests</h2>
         {mine.length === 0 ? (
           <p className="text-sm text-muted-foreground">You haven&apos;t requested anything yet. <Link href="/search" className="text-primary underline">Find something to rent</Link>.</p>
         ) : (
-          <ul className="space-y-3">{mine.map((b) => <BookingRow key={b.id} booking={b} who="Owner" actions={actionButtons(b)} />)}</ul>
+          <ul className="space-y-3">
+            {mine.map((b) => (
+              <BookingRow key={b.id} booking={b} who="Owner" actions={renterActionButtons(b)} />
+            ))}
+          </ul>
         )}
       </section>
 
       <section id="incoming" aria-labelledby="incoming-title" className="scroll-mt-24 space-y-3">
-        <h2 id="incoming-title" className="text-lg font-semibold">Requests for your items</h2>
+        <h2 id="incoming-title" className="text-lg font-semibold">Requests for Your Equipment</h2>
         <p className="text-sm text-muted-foreground">Accepting re-checks the dates; a request can&apos;t be accepted if another confirmed booking already covers them.</p>
         {incoming.length === 0 ? (
           <p className="text-sm text-muted-foreground">No requests yet. <Link href="/list-item" className="text-primary underline">List an item</Link> to start lending.</p>
         ) : (
-          <ul className="space-y-3">{incoming.map((b) => <BookingRow key={b.id} booking={b} who="Renter" actions={actionButtons(b)} />)}</ul>
+          <ul className="space-y-3">
+            {incoming.map((b) => (
+              <BookingRow key={b.id} booking={b} who="Renter" actions={ownerActionButtons(b)} />
+            ))}
+          </ul>
         )}
       </section>
+
+      {/* Escrow Checkout Modal */}
+      {payingBooking && (
+        <PaymentModal
+          booking={payingBooking}
+          isOpen={!!payingBooking}
+          onClose={() => setPayingBooking(null)}
+          onConfirm={async () => {
+            await act(payingBooking.id, "escrow_held");
+          }}
+        />
+      )}
+
+      {/* Handover Inspection Modal */}
+      {inspectingBooking && (
+        <HandoverModal
+          booking={inspectingBooking}
+          isOpen={!!inspectingBooking}
+          onClose={() => setInspectingBooking(null)}
+          onConfirm={async (photoUrl, note) => {
+            await act(inspectingBooking.id, "picked_up", {
+              pickupPhotoUrl: photoUrl,
+              pickupNote: note,
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

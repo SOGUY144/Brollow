@@ -5,7 +5,7 @@ import { transitionError } from "../domain/bookings";
 import { rangesOverlap, todayInAppTz, validateRentalDates } from "../domain/dates";
 import type { ValidListing } from "../domain/listing";
 import { quoteRental } from "../domain/pricing";
-import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, Profile } from "../types";
+import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, Profile, Wallet, WalletTransaction } from "../types";
 import { DataError, summarise, type BookingWithItem, type DataApi, type Viewer } from "./api";
 import { compressImage } from "./images";
 import { DEMO_USER_ID, SEED_PROFILES, seedBookings, seedItems, seedReviews } from "./seed";
@@ -14,17 +14,35 @@ import { DEMO_USER_ID, SEED_PROFILES, seedBookings, seedItems, seedReviews } fro
  * Demo mode: no real authentication. Everything the demo user changes is
  * kept in this browser's localStorage and can be reset.
  */
-const KEY = "brollow-demo-v2"; // v2: prices in satang (THB)
+const KEY = "brollow-demo-v3"; // v3: wallet support
 
 interface DemoState {
   createdItems: Item[];
   itemEdits: Record<string, Partial<Item>>;
   bookings: Booking[];
   favorites: string[];
+  walletBalanceSatang: number;
+  walletTransactions: WalletTransaction[];
 }
 
 function freshState(): DemoState {
-  return { createdItems: [], itemEdits: {}, bookings: seedBookings(todayInAppTz()), favorites: ["cam-03", "spo-02"] };
+  return {
+    createdItems: [],
+    itemEdits: {},
+    bookings: seedBookings(todayInAppTz()),
+    favorites: ["cam-03", "spo-02"],
+    walletBalanceSatang: 2500_00,
+    walletTransactions: [
+      {
+        id: "tx-init",
+        userId: DEMO_USER_ID,
+        amountSatang: 2500_00,
+        type: "deposit",
+        description: "Initial demo balance",
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  };
 }
 
 function load(): DemoState {
@@ -166,19 +184,38 @@ export function createDemoApi(): DataApi {
         .map((b) => withItem(state, b, b.renterId));
     },
 
-    async setBookingStatus(bookingId, to: BookingStatus) {
+    async setBookingStatus(bookingId, to: BookingStatus, details) {
       const state = load();
       const booking = state.bookings.find((b) => b.id === bookingId);
       if (!booking) throw new DataError("Booking not found.");
       const error = transitionError(booking, to, DEMO_USER_ID, todayInAppTz());
       if (error) throw new DataError(error);
-      if (to === "confirmed") {
+      if (to === "confirmed" || to === "approved") {
         const clash = blocked(state, booking.id).some(
           (r) => r.itemId === booking.itemId && rangesOverlap(r.startDate, r.endDate, booking.startDate, booking.endDate),
         );
         if (clash) throw new DataError("Another confirmed booking already covers these dates. Decline this request instead.");
       }
       booking.status = to;
+      if (details?.pickupPhotoUrl) booking.pickupPhotoUrl = details.pickupPhotoUrl;
+      if (details?.pickupNote) booking.pickupNote = details.pickupNote;
+      if (to === "picked_up") {
+        booking.pickedUpAt = new Date().toISOString();
+        booking.payoutStatus = "released";
+        if (booking.ownerId === DEMO_USER_ID) {
+          state.walletBalanceSatang = (state.walletBalanceSatang ?? 0) + booking.totalSatang;
+          state.walletTransactions = state.walletTransactions ?? [];
+          state.walletTransactions.unshift({
+            id: newId("tx"),
+            userId: DEMO_USER_ID,
+            amountSatang: booking.totalSatang,
+            type: "escrow_payout",
+            referenceId: booking.id,
+            description: `Rental payout for ${allItems(state).find((i) => i.id === booking.itemId)?.title ?? "Item"}`,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
       booking.updatedAt = new Date().toISOString();
       save(state);
     },
@@ -236,6 +273,47 @@ export function createDemoApi(): DataApi {
 
     async resetDemo() {
       save(freshState());
+    },
+
+    async getWallet(): Promise<Wallet> {
+      const state = load();
+      return {
+        balanceSatang: state.walletBalanceSatang ?? 0,
+        transactions: state.walletTransactions ?? [],
+      };
+    },
+
+    async depositWallet(amountSatang: number): Promise<void> {
+      const state = load();
+      state.walletBalanceSatang = (state.walletBalanceSatang ?? 0) + amountSatang;
+      state.walletTransactions = state.walletTransactions ?? [];
+      state.walletTransactions.unshift({
+        id: newId("tx"),
+        userId: DEMO_USER_ID,
+        amountSatang,
+        type: "deposit",
+        description: "Deposit via Mock PromptPay / Card",
+        createdAt: new Date().toISOString(),
+      });
+      save(state);
+    },
+
+    async withdrawWallet(amountSatang: number, destination: string): Promise<void> {
+      const state = load();
+      if ((state.walletBalanceSatang ?? 0) < amountSatang) {
+        throw new DataError("Insufficient wallet balance.");
+      }
+      state.walletBalanceSatang = (state.walletBalanceSatang ?? 0) - amountSatang;
+      state.walletTransactions = state.walletTransactions ?? [];
+      state.walletTransactions.unshift({
+        id: newId("tx"),
+        userId: DEMO_USER_ID,
+        amountSatang: -amountSatang,
+        type: "withdrawal",
+        description: `Withdrawal to ${destination}`,
+        createdAt: new Date().toISOString(),
+      });
+      save(state);
     },
   };
 }
