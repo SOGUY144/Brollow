@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowRight,
   CheckCircle2,
@@ -55,11 +56,16 @@ export function AiKitModal({
   catalog,
 }: AiKitModalProps) {
   const { api } = useData();
+  const [mounted, setMounted] = useState(false);
   const [activeCatalog, setActiveCatalog] = useState<ItemSummary[]>(catalog);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<SmartKitResult | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync catalog prop or fetch if empty
   useEffect(() => {
@@ -146,19 +152,30 @@ export function AiKitModal({
     void handleGenerate(p);
   };
 
-  if (!isOpen) return null;
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
 
-  return (
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="ai-kit-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl bg-card border shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl bg-white dark:bg-[#19221b] border border-border shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-200">
         {/* Header - Star icon removed per user request */}
         <div className="flex items-center justify-between border-b px-5 py-4 bg-muted/30">
           <div>
@@ -385,6 +402,7 @@ export function AiKitModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
