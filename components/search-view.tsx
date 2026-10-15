@@ -1,8 +1,9 @@
 "use client";
 
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { AiKitModal } from "@/components/ai-kit-modal";
 import { LocateButton, useLocation } from "@/components/location-context";
 import { distanceKm, validCoordinates } from "@/lib/domain/location";
 import { validateRentalDates } from "@/lib/domain/dates";
@@ -33,6 +34,7 @@ export function SearchView({ today }: { today: string }) {
   const filters = useMemo(() => filtersFromParams(new URLSearchParams(params.toString())), [params]);
   const catalog = useCatalog();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   // Every applied change becomes a history entry, so back/forward and refresh restore it.
   const apply = (next: SearchFilters) => {
@@ -66,6 +68,15 @@ export function SearchView({ today }: { today: string }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAiModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#e3edc8] dark:bg-emerald-950/80 text-[#124e3b] dark:text-emerald-300 font-semibold text-xs hover:brightness-95 active:scale-98 transition shadow-xs cursor-pointer"
+            title="Ask AI to find or bundle equipment"
+          >
+            <Sparkles className="size-3.5" />
+            <span>Ask AI</span>
+          </button>
           <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
             <SheetTrigger render={<Button variant="outline" className="h-10 lg:hidden" />}>
               <SlidersHorizontal /> Filters{chips.length ? ` (${chips.length})` : ""}
@@ -158,6 +169,13 @@ export function SearchView({ today }: { today: string }) {
           )}
         </section>
       </div>
+
+      <AiKitModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        initialPrompt={filters.q}
+        catalog={catalog.status === "ready" ? catalog.data.items : []}
+      />
     </div>
   );
 }
