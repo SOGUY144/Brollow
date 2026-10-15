@@ -1,6 +1,7 @@
 import { CalendarCheck, Handshake, Search } from "lucide-react";
 import Link from "next/link";
-import { HeroSlideshow } from "@/components/hero-slideshow";
+import { WelcomeIntro } from "@/components/welcome-intro";
+import { TypingHeading } from "@/components/typing-heading";
 import { Suspense } from "react";
 import { CategoryIcon } from "@/components/category-icon";
 import { HeroSearch } from "@/components/hero-search";
@@ -21,29 +22,32 @@ const STEPS = [
 export default function HomePage() {
   return (
     <div className="mx-auto max-w-7xl space-y-7 px-4 pb-8 pt-5 sm:px-6">
-      <section className="space-y-6">
-        <div className="grid overflow-hidden rounded-3xl bg-[#e8eddf] grid-cols-[1.2fr_1fr] sm:grid-cols-[1.1fr_1fr]">
-          <div className="flex flex-col items-start justify-center p-5 sm:p-10">
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs text-primary">Less buying. More doing.</p>
-            <h1 className="max-w-md text-2xl font-semibold leading-tight tracking-tight text-primary sm:text-5xl">Big plans.<br />Borrow the gear.</h1>
-            <p className="mt-3 max-w-sm text-xs text-muted-foreground sm:text-base">Cameras, camping kit and everyday tools. Find what you need for your next idea.</p>
-            <Link href="/search" className="mt-4 inline-flex h-11 items-center rounded-full bg-primary px-4 text-xs sm:px-6 sm:text-sm font-medium text-primary-foreground hover:opacity-90">Explore equipment <span className="ml-3" aria-hidden="true">↗</span></Link>
+      <section className="sharing-hero" aria-labelledby="hero-title">
+        <div className="sharing-art" role="img" aria-label="Illustration of two neighbours sharing a camera, with tools, a projector and music equipment" />
+        <div className="sharing-copy">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[.18em] text-primary">Less sitting around. More possibilities.</p>
+          <TypingHeading />
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <Link href="#rental-search" className="rounded-full bg-primary px-6 py-3 text-sm font-medium text-white">Find something to rent →</Link>
+            <Link href="/list-item" className="rounded-full bg-[#e3edc8] px-6 py-3 text-sm font-medium text-primary">Start earning →</Link>
           </div>
-          <HeroSlideshow />
+          <WelcomeIntro />
         </div>
-        <Suspense fallback={<div className="h-[68px] rounded-2xl border bg-card" aria-hidden="true" />}>
-          <DatedHeroSearch />
-        </Suspense>
+        <div id="rental-search" className="sharing-search scroll-mt-24">
+          <Suspense fallback={<div className="h-32 rounded-2xl border bg-card" aria-hidden="true" />}>
+            <DatedHeroSearch />
+          </Suspense>
+        </div>
       </section>
 
       <section id="categories" aria-labelledby="categories-title" className="scroll-mt-24 space-y-4">
-        <h2 id="categories-title" className="text-xl font-semibold tracking-tight">Popular categories</h2>
+        <h2 id="categories-title" className="text-xl font-semibold tracking-tight">What will you put to use?</h2>
         <ul className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 lg:grid-cols-7">
           {CATEGORIES.map((c) => (
             <li key={c.slug} className="w-28 shrink-0 sm:w-auto">
               <Link
                 href={`/search?category=${c.slug}`}
-                className="flex h-full flex-col gap-2 rounded-xl border bg-card p-4 transition hover:border-primary/40 hover:bg-brand-soft/40"
+                className="flex h-full flex-col items-center gap-3 rounded-2xl bg-[#eeeede] p-4 text-center transition hover:bg-brand-soft"
               >
                 <CategoryIcon category={c.slug} className="size-6 text-primary" strokeWidth={1.75} />
                 <span className="text-sm font-medium leading-tight">{c.name}</span>
