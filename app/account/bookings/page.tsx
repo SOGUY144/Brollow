@@ -2,7 +2,7 @@
 
 import { Camera, CheckCircle2, FileText, Lock, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AccountShell } from "@/components/account-shell";
 import { BookingRow } from "@/components/booking-row";
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
 import { allowedActions } from "@/lib/domain/bookings";
 import { todayInAppTz } from "@/lib/domain/dates";
+import { getBookingLastRead, hasUnreadMessages, setBookingLastRead } from "@/lib/domain/messaging";
 import { ratingEligibility, reputationOf } from "@/lib/domain/ratings";
 import type { BookingWithItem } from "@/lib/data/api";
 import { formatMoney } from "@/lib/format";
@@ -48,6 +49,63 @@ function Bookings() {
   const [inspectingBooking, setInspectingBooking] = useState<BookingWithItem | null>(null);
   const [receiptBooking, setReceiptBooking] = useState<BookingWithItem | null>(null);
   const [chatBooking, setChatBooking] = useState<BookingWithItem | null>(null);
+  const [unreadBookingIds, setUnreadBookingIds] = useState<Set<string>>(new Set());
+
+  const handleOpenChat = (b: BookingWithItem) => {
+    setBookingLastRead(b.id);
+    setUnreadBookingIds((prev) => {
+      if (!prev.has(b.id)) return prev;
+      const next = new Set(prev);
+      next.delete(b.id);
+      return next;
+    });
+    setChatBooking(b);
+  };
+
+  useEffect(() => {
+    if (data.status !== "ready" || !viewer?.id) return;
+
+    const bookingsToCheck = [...data.data.mine, ...data.data.incoming].filter(
+      (b) => b.status !== "cancelled" && b.status !== "declined"
+    );
+    if (bookingsToCheck.length === 0) return;
+
+    let isMounted = true;
+
+    async function checkUnread() {
+      try {
+        const unread = new Set<string>();
+        await Promise.all(
+          bookingsToCheck.map(async (b) => {
+            try {
+              const msgs = await api.listMessages(b.id);
+              const lastRead = getBookingLastRead(b.id);
+              if (hasUnreadMessages(msgs, viewer!.id, lastRead)) {
+                unread.add(b.id);
+              }
+            } catch {
+              // Ignore individual fetch errors
+            }
+          })
+        );
+        if (isMounted) {
+          setUnreadBookingIds(unread);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    void checkUnread();
+    const interval = setInterval(() => {
+      void checkUnread();
+    }, 4000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [api, data, viewer?.id]);
 
   async function act(id: string, to: BookingStatus, details?: { pickupPhotoUrl?: string; pickupNote?: string }) {
     if (to === "cancelled" && !window.confirm("Cancel this booking?")) return;
@@ -167,10 +225,23 @@ function Bookings() {
             size="sm"
             variant="outline"
             className="border-muted-foreground/30 text-foreground hover:bg-muted flex items-center gap-1.5"
-            onClick={() => setChatBooking(b)}
+            onClick={() => handleOpenChat(b)}
           >
-            <MessageCircle className="size-3.5 text-primary" />
-            Chat with Owner
+            <div className="relative">
+              <MessageCircle className="size-3.5 text-primary" />
+              {unreadBookingIds.has(b.id) && (
+                <span className="absolute -top-1 -right-1 flex size-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                </span>
+              )}
+            </div>
+            <span>Chat with Owner</span>
+            {unreadBookingIds.has(b.id) && (
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 dark:text-emerald-300 dark:bg-emerald-950/80 rounded-full px-1.5 py-0.5 leading-none">
+                New
+              </span>
+            )}
           </Button>
         )}
 
@@ -286,10 +357,23 @@ function Bookings() {
             size="sm"
             variant="outline"
             className="border-muted-foreground/30 text-foreground hover:bg-muted flex items-center gap-1.5"
-            onClick={() => setChatBooking(b)}
+            onClick={() => handleOpenChat(b)}
           >
-            <MessageCircle className="size-3.5 text-primary" />
-            Chat with Renter
+            <div className="relative">
+              <MessageCircle className="size-3.5 text-primary" />
+              {unreadBookingIds.has(b.id) && (
+                <span className="absolute -top-1 -right-1 flex size-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                </span>
+              )}
+            </div>
+            <span>Chat with Renter</span>
+            {unreadBookingIds.has(b.id) && (
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 dark:text-emerald-300 dark:bg-emerald-950/80 rounded-full px-1.5 py-0.5 leading-none">
+                New
+              </span>
+            )}
           </Button>
         )}
 
@@ -430,6 +514,14 @@ function Bookings() {
           isOpen={!!chatBooking}
           onClose={() => setChatBooking(null)}
           api={api}
+          onMarkRead={(bookingId) => {
+            setUnreadBookingIds((prev) => {
+              if (!prev.has(bookingId)) return prev;
+              const next = new Set(prev);
+              next.delete(bookingId);
+              return next;
+            });
+          }}
         />
       )}
     </div>

@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import type { BookingWithItem, DataApi } from "@/lib/data/api";
-import { formatMessageTimestamp, groupMessagesByDate, validateMessageText } from "@/lib/domain/messaging";
+import { formatMessageTimestamp, groupMessagesByDate, setBookingLastRead, validateMessageText } from "@/lib/domain/messaging";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import type { ChatMessage } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ interface BookingChatDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   api: DataApi;
+  onMarkRead?: (bookingId: string) => void;
 }
 
 const QUICK_PROMPTS = [
@@ -38,6 +39,7 @@ export function BookingChatDrawer({
   isOpen,
   onClose,
   api,
+  onMarkRead,
 }: BookingChatDrawerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +59,8 @@ export function BookingChatDrawer({
     if (!isOpen) return;
 
     let isMounted = true;
+    setBookingLastRead(booking.id);
+    onMarkRead?.(booking.id);
 
     async function loadData(showSpinner = false) {
       if (showSpinner) {
