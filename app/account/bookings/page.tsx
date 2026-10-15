@@ -35,8 +35,8 @@ function Bookings() {
     const all = [...mine, ...incoming];
     // Ratings already given on these bookings, and the other people's reputations.
     const [given, about] = await Promise.all([
-      api.listRatings({ bookingIds: all.map((b) => b.id) }),
-      api.listRatings({ rateeIds: [...new Set(all.map((b) => b.counterpart?.id).filter((id): id is string => Boolean(id)))] }),
+      api.listRatings({ bookingIds: all.map((b) => b.id) }).catch(() => []),
+      api.listRatings({ rateeIds: [...new Set(all.map((b) => b.counterpart?.id).filter((id): id is string => Boolean(id)))] }).catch(() => []),
     ]);
     return { mine, incoming, given, about, today: todayInAppTz() };
   }, [api]);

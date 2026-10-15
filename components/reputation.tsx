@@ -13,7 +13,7 @@ export function useReputations(userIds: string[]) {
   const key = [...new Set(userIds)].sort().join(",");
   return useLoad(async () => {
     const ids = key ? key.split(",") : [];
-    const ratings = ids.length ? await api.listRatings({ rateeIds: ids }) : [];
+    const ratings = ids.length ? await api.listRatings({ rateeIds: ids }).catch(() => []) : [];
     const map = new Map<string, Reputation>(ids.map((id) => [id, reputationOf(id, ratings)]));
     return { ratings, reputations: map };
   }, [api, key]);

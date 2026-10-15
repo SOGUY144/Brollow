@@ -28,7 +28,9 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
       ? all.filter((i) => i.id !== id && i.status === "active" && i.category === found.item.category).slice(0, 4)
       : [];
     // The owner's public ratings from past renters.
-    const ownerRatings = found ? await api.listRatings({ rateeIds: [found.item.ownerId] }) : [];
+    const ownerRatings = found
+      ? await api.listRatings({ rateeIds: [found.item.ownerId] }).catch(() => [])
+      : [];
     return { found, blocked, related, ownerRatings };
   }, [api, id]);
   const [photo, setPhoto] = useState(0);

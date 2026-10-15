@@ -222,14 +222,23 @@ export function createLiveApi(url: string, key: string): DataApi {
 
     async listRatings({ rateeIds, bookingIds }) {
       if (rateeIds?.length === 0 || bookingIds?.length === 0) return [];
-      let query = sb.from("user_ratings").select("*").order("created_at", { ascending: false });
-      if (rateeIds) query = query.in("ratee_id", rateeIds);
-      if (bookingIds) query = query.in("booking_id", bookingIds);
-      const { data, error } = await query;
-      if (error) fail(error, "Couldn't load ratings.");
-      const rows = data as RatingRow[];
-      const raters = await profilesById(rows.map((r) => r.rater_id));
-      return rows.map((r) => toRating(r, raters.get(r.rater_id)?.displayName));
+      try {
+        let query = sb.from("user_ratings").select("*").order("created_at", { ascending: false });
+        if (rateeIds) query = query.in("ratee_id", rateeIds);
+        if (bookingIds) query = query.in("booking_id", bookingIds);
+        const { data, error } = await query;
+        if (error) {
+          console.warn("Ratings not available or failed to load:", error.message || error);
+          return [];
+        }
+        const rows = (data as RatingRow[] | null) ?? [];
+        if (rows.length === 0) return [];
+        const raters = await profilesById(rows.map((r) => r.rater_id));
+        return rows.map((r) => toRating(r, raters.get(r.rater_id)?.displayName));
+      } catch (err) {
+        console.warn("Ratings error:", err);
+        return [];
+      }
     },
 
     async submitRating({ bookingId, score, tags, comment }) {
