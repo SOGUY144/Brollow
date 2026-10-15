@@ -32,6 +32,8 @@ export interface Item {
   /** Daily price in satang (1 baht = 100 satang). */
   dailyPriceSatang: number;
   location: string;
+  /** Owner-provided pickup coordinates. Never inferred from an area name. */
+  coordinates?: import("./domain/location").Coordinates | null;
   condition: ItemCondition;
   rules: string[];
   images: string[];
@@ -84,6 +86,8 @@ export interface ItemSummary extends Item {
 }
 
 export interface ListingInput {
+  pickupLatitude?: string;
+  pickupLongitude?: string;
   title: string;
   description: string;
   category: CategorySlug | "";

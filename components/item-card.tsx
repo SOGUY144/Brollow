@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocation } from "@/components/location-context";
+import { distanceKm } from "@/lib/domain/location";
 import { MapPin, Star } from "lucide-react";
 import Link from "next/link";
 import { FavoriteButton } from "@/components/favorite-button";
@@ -10,6 +12,8 @@ import type { ItemSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function ItemCard({ item, availability }: { item: ItemSummary; availability?: AvailabilityResult }) {
+  const { origin } = useLocation();
+  const distance = distanceKm(origin, item.coordinates);
   return (
     <article className="group relative">
       <Link href={`/items/${item.id}`} className="block rounded-xl focus-visible:outline-offset-4">
@@ -20,6 +24,8 @@ export function ItemCard({ item, availability }: { item: ItemSummary; availabili
             <MapPin className="size-3 shrink-0" aria-hidden="true" />
             <span className="line-clamp-1">{item.location}</span>
           </p>
+          {distance !== null && <p className="text-xs text-primary">~{distance.toFixed(1)} km · straight line</p>}
+          {item.owner?.isDemo && <p className="text-xs text-amber-800">Demo listing · fictional content</p>}
           <div className="flex items-center justify-between gap-2 pt-0.5">
             <p className="text-sm">
               <span className="font-semibold">{formatMoney(item.dailyPriceSatang)}</span>

@@ -49,9 +49,9 @@ export function HomeListings() {
     );
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-7">
       <Section title="Recently active items" href="/search">{grid(recent)}</Section>
-      <Section title="Highly rated near you" href="/search?sort=rating">{grid(topRated)}</Section>
+      <Section title="Highly rated items" href="/search?sort=rating">{grid(topRated)}</Section>
     </div>
   );
 }

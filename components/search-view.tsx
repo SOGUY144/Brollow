@@ -3,6 +3,9 @@
 import { SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { LocateButton, useLocation } from "@/components/location-context";
+import { distanceKm, validCoordinates } from "@/lib/domain/location";
+import { validateRentalDates } from "@/lib/domain/dates";
 import { GRID, ItemCard, ItemCardSkeleton } from "@/components/item-card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -24,6 +27,8 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 export function SearchView({ today }: { today: string }) {
   const router = useRouter();
+  const { origin } = useLocation();
+  const [radius, setRadius] = useState<number | null>(null);
   const params = useSearchParams();
   const filters = useMemo(() => filtersFromParams(new URLSearchParams(params.toString())), [params]);
   const catalog = useCatalog();
@@ -35,7 +40,10 @@ export function SearchView({ today }: { today: string }) {
     router.push(`/search${qs ? `?${qs}` : ""}`, { scroll: false });
   };
 
-  const results = catalog.status === "ready" ? searchItems(catalog.data.items, filters, catalog.data.blocked) : [];
+  const matching = catalog.status === "ready" ? searchItems(catalog.data.items, filters, catalog.data.blocked) : [];
+
+  const hasCoordinates = catalog.status === "ready" && catalog.data.items.some(i => validCoordinates(i.coordinates));
+  const results = origin && radius !== null && hasCoordinates ? matching.filter(i => { const d = distanceKm(origin, i.coordinates); return d !== null && d <= radius; }) : matching;
 
   const chips: { label: string; clear: Partial<SearchFilters> }[] = [];
   if (filters.q) chips.push({ label: `“${filters.q}”`, clear: { q: "" } });
@@ -85,6 +93,15 @@ export function SearchView({ today }: { today: string }) {
         </div>
       </div>
 
+      <section aria-label="Distance filters" className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border bg-card px-4 py-2">
+        <LocateButton />
+        <label className="flex items-center gap-2 text-sm">Distance
+          <select aria-label="Distance radius" value={radius ?? ""} disabled={!origin || !hasCoordinates} onChange={e => setRadius(e.target.value ? Number(e.target.value) : null)} className="h-9 rounded-lg border bg-background px-2 disabled:opacity-50">
+            <option value="">Any distance</option>{[1, 5, 10].map(km => <option key={km} value={km}>Within {km} km</option>)}
+          </select>
+        </label>
+        <p className="w-full pb-1 text-xs text-muted-foreground">{!hasCoordinates ? "Pickup coordinates are not available yet. Search by area below; no distance is assumed." : "Approximate straight-line distances. A radius filter excludes items without pickup coordinates."}</p>
+      </section>
       {chips.length > 0 && (
         <ul className="mt-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
           {chips.map((chip) => (
@@ -146,6 +163,8 @@ export function SearchView({ today }: { today: string }) {
 }
 
 function FilterForm({ filters, today, onApply }: { filters: SearchFilters; today: string; onApply: (f: SearchFilters) => void }) {
+  const catalog = useCatalog();
+  const areas = catalog.status === "ready" ? [...new Set(catalog.data.items.map(i => i.location))].sort() : [];
   const [q, setQ] = useState(filters.q);
   const [location, setLocation] = useState(filters.location);
   const [min, setMin] = useState(filters.minPriceSatang === null ? "" : String(filters.minPriceSatang / 100));
@@ -167,6 +186,8 @@ function FilterForm({ filters, today, onApply }: { filters: SearchFilters; today
     if ((start && !end) || (!start && end)) return setError("Choose both dates, or leave both empty.");
     if (start && start < today) return setError("The start date can't be in the past.");
     if (start && end < start) return setError("The end date can't be before the start date.");
+    const dateProblem = start && end ? validateRentalDates(start, end, today) : null;
+    if (dateProblem) return setError(dateProblem);
     onApply({ ...filters, q, location, minPriceSatang: minP, maxPriceSatang: maxP, start: start || null, end: end || null });
   }
 
@@ -189,7 +210,8 @@ function FilterForm({ filters, today, onApply }: { filters: SearchFilters; today
       </fieldset>
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">Location</span>
-        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Leeds or Hackney" className={input} />
+        <input list="filter-areas" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Leeds or Hackney" className={input} />
+        <datalist id="filter-areas">{areas.map(area => <option key={area} value={area} />)}</datalist>
         <span className="block text-xs text-muted-foreground">Matches the area named in the listing.</span>
       </label>
       <fieldset className="space-y-1.5">

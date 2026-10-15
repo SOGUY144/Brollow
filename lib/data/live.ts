@@ -12,6 +12,7 @@ interface ItemRow {
   daily_price_satang: number; location: string; condition: string; rules: string[]; images: string[];
   available_from: string | null; available_until: string | null; status: "active" | "paused";
   created_at: string; updated_at: string;
+  pickup_latitude?: number | null; pickup_longitude?: number | null;
 }
 interface ProfileRow { id: string; display_name: string; area: string; bio: string; member_since: string; is_demo: boolean }
 interface ReviewRow { id: string; item_id: string; author_name: string; rating: number; comment: string; created_at: string; is_demo: boolean }
@@ -26,6 +27,7 @@ const toItem = (r: ItemRow): Item => ({
   dailyPriceSatang: r.daily_price_satang, location: r.location, condition: r.condition as ItemCondition, rules: r.rules,
   images: r.images, availableFrom: r.available_from, availableUntil: r.available_until, status: r.status,
   createdAt: r.created_at, updatedAt: r.updated_at,
+  coordinates: r.pickup_latitude != null && r.pickup_longitude != null ? { latitude: r.pickup_latitude, longitude: r.pickup_longitude } : null,
 });
 const toProfile = (r: ProfileRow): Profile => ({
   id: r.id, displayName: r.display_name, area: r.area, bio: r.bio, memberSince: r.member_since, isDemo: r.is_demo,
@@ -104,6 +106,7 @@ export function createLiveApi(url: string, key: string): DataApi {
   }
 
   const listingRow = (value: Parameters<DataApi["createListing"]>[0]) => ({
+    pickup_latitude: value.coordinates?.latitude ?? null, pickup_longitude: value.coordinates?.longitude ?? null,
     title: value.title, description: value.description, category: value.category,
     daily_price_satang: value.dailyPriceSatang, location: value.location, condition: value.condition,
     rules: value.rules, available_from: value.availableFrom, available_until: value.availableUntil,

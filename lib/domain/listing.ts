@@ -1,3 +1,4 @@
+import { validCoordinates, type Coordinates } from "./location";
 import { isCategory } from "../categories";
 import type { CategorySlug, ItemCondition, ListingInput } from "../types";
 import { isIsoDate } from "./dates";
@@ -13,6 +14,7 @@ export const MAX_DAILY_SATANG = 2_000_000;
 export type ListingErrors = Partial<Record<keyof ListingInput | "photos", string>>;
 
 export interface ValidListing {
+  coordinates?: Coordinates | null;
   title: string;
   description: string;
   category: CategorySlug;
@@ -51,10 +53,17 @@ export function validateListing(
   if (photoCount < 1) errors.photos = "Add at least one photo.";
   if (photoCount > MAX_PHOTOS) errors.photos = `Add at most ${MAX_PHOTOS} photos.`;
 
+  const latitude = input.pickupLatitude?.trim() ?? "";
+  const longitude = input.pickupLongitude?.trim() ?? "";
+  const coordinates = latitude || longitude ? { latitude: Number(latitude), longitude: Number(longitude) } : null;
+  if (coordinates && (!latitude || !longitude || !validCoordinates(coordinates))) {
+    errors.pickupLatitude = "Enter both valid coordinates: latitude -90 to 90, longitude -180 to 180.";
+  }
   if (Object.keys(errors).length) return { ok: false, errors };
   return {
     ok: true,
     value: {
+      coordinates,
       title,
       description,
       category: input.category as CategorySlug,

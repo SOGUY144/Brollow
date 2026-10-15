@@ -4,6 +4,8 @@ import { CalendarX2, CheckCircle2, MapPin, Star } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { errorMessage, useData } from "@/components/data-provider";
+import { RentalCalendar } from "@/components/rental-calendar";
+import { PickupLocation } from "@/components/pickup-location";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ItemCard } from "@/components/item-card";
 import { ItemImage } from "@/components/item-image";
@@ -70,15 +72,15 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
         <Link href={`/search?category=${item.category}`} className="hover:underline">{categoryName(item.category)}</Link>
       </nav>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-8">
-          <section aria-label="Photos" className="space-y-2">
-            <div className="relative">
-              <ItemImage src={images[photo]} alt={`${item.title}, photo ${photo + 1} of ${images.length}`} category={item.category} className="rounded-2xl" eager />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="detail-content min-w-0 space-y-6">
+          <section aria-label="Photos" className="grid gap-3 sm:grid-cols-[76px_minmax(0,1fr)]">
+            <div className="relative min-w-0 sm:col-start-2 sm:row-start-1">
+              <ItemImage src={images[photo]} alt={`${item.title}, photo ${photo + 1} of ${images.length}`} category={item.category} className="rounded-2xl [&_img]:object-contain" eager />
               <FavoriteButton itemId={item.id} title={item.title} className="absolute right-3 top-3" />
             </div>
             {images.length > 1 && (
-              <div className="flex gap-2">
+              <div className="flex gap-3 sm:col-start-1 sm:row-start-1 sm:flex-col">
                 {images.map((src, i) => (
                   <button
                     key={i}
@@ -86,7 +88,7 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
                     onClick={() => setPhoto(i)}
                     aria-label={`Show photo ${i + 1}`}
                     aria-pressed={photo === i}
-                    className="w-20 overflow-hidden rounded-lg ring-offset-2 aria-pressed:ring-2 aria-pressed:ring-primary"
+                    className="w-16 shrink-0 overflow-hidden rounded-lg ring-offset-2 aria-pressed:ring-2 aria-pressed:ring-primary"
                   >
                     <ItemImage src={src} alt="" category={item.category} />
                   </button>
@@ -106,6 +108,7 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
                 </span>
               )}
             </p>
+            {item.owner?.isDemo && <p className="text-xs font-medium text-amber-800">Demo listing · fictional owner and listing information</p>}
             <p className="whitespace-pre-line leading-relaxed">{item.description}</p>
           </section>
 
@@ -134,6 +137,8 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
             </section>
           )}
 
+          <PickupLocation item={item} />
+
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Reviews</h2>
             {reviews.length === 0 ? (
@@ -160,7 +165,7 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
           </section>
         </div>
 
-        <aside className="lg:sticky lg:top-20 lg:self-start">
+        <aside className="order-2 min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto">
           <BookingPanel itemId={item.id} ownerId={item.ownerId} dailyPriceSatang={item.dailyPriceSatang} item={item} blocked={blocked} today={today} />
           {upcoming.length > 0 && (
             <div className="mt-3 rounded-xl border bg-card p-4 text-sm">
@@ -242,21 +247,22 @@ function BookingPanel({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border bg-card p-5" noValidate>
+    <form onSubmit={submit} className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm" noValidate>
       <p>
         <span className="text-2xl font-semibold">{formatMoney(dailyPriceSatang)}</span>
         <span className="text-muted-foreground"> / day</span>
       </p>
+      <RentalCalendar item={item} blocked={blocked} today={today} start={start} end={end} onChange={(a, b) => { setStart(a); setEnd(b); setError(""); }} />
       <div className="grid grid-cols-2 gap-2">
         <label className="space-y-1 text-sm">
-          <span className="font-medium">From</span>
+          <span className="font-medium">Pickup</span>
           <input type="date" value={start} min={today} onChange={(e) => { setStart(e.target.value); setError(""); }}
-            className="h-10 w-full rounded-lg border border-input bg-background px-2 text-sm" aria-invalid={Boolean(dateError)} />
+            className="h-10 min-w-0 w-full rounded-lg border border-input bg-background px-2 text-sm" aria-invalid={Boolean(dateError)} />
         </label>
         <label className="space-y-1 text-sm">
-          <span className="font-medium">Until</span>
+          <span className="font-medium">Return</span>
           <input type="date" value={end} min={start || today} onChange={(e) => { setEnd(e.target.value); setError(""); }}
-            className="h-10 w-full rounded-lg border border-input bg-background px-2 text-sm" aria-invalid={Boolean(dateError)} />
+            className="h-10 min-w-0 w-full rounded-lg border border-input bg-background px-2 text-sm" aria-invalid={Boolean(dateError)} />
         </label>
       </div>
       <p className="text-xs text-muted-foreground">Dates are inclusive. Collecting and returning on the same day counts as 1 day.</p>
@@ -294,8 +300,8 @@ function BookingPanel({
             <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={3}
               placeholder="What will you use it for? When could you collect?" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
           </label>
-          {error && error !== dateError && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="h-11 w-full" disabled={submitting || !viewerReady}>
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="h-11 w-full" disabled={submitting || !viewerReady || !quote || !!dateError || !availability?.available}>
             {submitting ? "Sending request…" : "Request to rent"}
           </Button>
           <p className="text-xs text-muted-foreground">You won&apos;t be charged. The owner confirms the request; payment isn&apos;t handled in this prototype.</p>

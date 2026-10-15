@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Suspense } from "react";
 import { DataProvider } from "@/components/data-provider";
+import { LocationProvider } from "@/components/location-context";
 import { ModeIndicator } from "@/components/mode-indicator";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <DataProvider>
+          <LocationProvider>
           <Suspense fallback={<div className="h-16 border-b" aria-hidden="true" />}>
             <SiteHeader />
           </Suspense>
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SiteFooter />
           <ModeIndicator />
           <Toaster position="top-center" />
+          </LocationProvider>
         </DataProvider>
       </body>
     </html>

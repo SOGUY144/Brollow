@@ -75,7 +75,9 @@ Demo photos are openly licensed images from [Openverse](https://openverse.org), 
 
 ## Known limitations
 
-- Location search matches the listing's area text; it is not distance-based.
+- Area search works without location permission. Optional owner-provided pickup coordinates enable OpenStreetMap and approximate straight-line distances. Radius filters (1/5/10 km) exclude listings without coordinates. Seed listings have no invented coordinates.
+- Apply `supabase/migrations/20261015010000_pickup_coordinates.sql` before using the updated listing form with live Supabase. Existing records remain area-only until the owner adds a public pickup point.
+- Location permission is requested only by the current-location button; user coordinates are held in memory and not written to URLs or storage. Map tiles need an internet connection.
 - No payments, deposits, insurance, messaging or identity checks.
 - Search loads all active listings into the browser, which suits a prototype, not a large catalogue.
 - Reviews can't be written from the app yet (seed data only).

@@ -17,6 +17,8 @@ const input = "w-full rounded-lg border border-input bg-background px-3 text-sm 
 
 function toInput(item?: Item): ListingInput {
   return {
+    pickupLatitude: item?.coordinates ? String(item.coordinates.latitude) : "",
+    pickupLongitude: item?.coordinates ? String(item.coordinates.longitude) : "",
     title: item?.title ?? "",
     description: item?.description ?? "",
     category: item?.category ?? "",
@@ -153,6 +155,16 @@ export function ListingForm({ existing }: { existing?: Item }) {
           {fieldError("location")}
         </label>
       </div>
+
+      <fieldset className="space-y-2 rounded-xl border p-4">
+        <legend className="px-1 text-sm font-medium">Pickup map (optional)</legend>
+        <p className="text-xs text-muted-foreground">Add a public pickup point to show a map and distance. These coordinates will be visible to renters. Leave both empty to show only your area.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="space-y-1 text-sm"><span>Pickup latitude</span><input id="field-pickupLatitude" inputMode="decimal" value={values.pickupLatitude ?? ""} onChange={e => set("pickupLatitude", e.target.value)} className={cn(input, "h-11")} aria-invalid={!!errors.pickupLatitude} aria-describedby={describedBy("pickupLatitude")} /></label>
+          <label className="space-y-1 text-sm"><span>Pickup longitude</span><input inputMode="decimal" value={values.pickupLongitude ?? ""} onChange={e => set("pickupLongitude", e.target.value)} className={cn(input, "h-11")} /></label>
+        </div>
+        {fieldError("pickupLatitude")}
+      </fieldset>
 
       <fieldset className="space-y-1.5">
         <legend className="text-sm font-medium">Availability <span className="font-normal text-muted-foreground">(optional; leave empty for any time)</span></legend>

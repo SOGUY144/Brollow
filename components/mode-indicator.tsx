@@ -11,7 +11,7 @@ export function ModeIndicator() {
   return (
     <Link
       href="/account#demo"
-      className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm hover:bg-amber-100"
+      className="mx-4 mb-4 inline-flex self-end items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm hover:bg-amber-100"
     >
       <FlaskConical className="size-3.5" aria-hidden="true" />
       Demo mode
