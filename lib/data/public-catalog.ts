@@ -14,32 +14,44 @@ export async function getPublicCatalog(): Promise<ItemSummary[]> {
   "use cache";
   cacheLife("minutes");
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
+  const fallback = () => {
     const profiles = new Map<string, Profile>(SEED_PROFILES.map((p) => [p.id, p]));
     return seedItems().map((i) => summarise(i, profiles, seedReviews()));
+  };
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)?.trim();
+  if (!url || !key) {
+    return fallback();
   }
 
-  const sb = createClient(url, key, { auth: { persistSession: false } });
-  const { data: rows, error } = await sb.from("items").select("*").eq("status", "active");
-  if (error) throw new Error(`Couldn't load public listings: ${error.message}`);
-  const items: Item[] = rows.map((r) => ({
-    id: r.id, ownerId: r.owner_id, title: r.title, description: r.description, category: r.category as CategorySlug,
-    dailyPriceSatang: r.daily_price_satang, location: r.location, condition: r.condition as ItemCondition, rules: r.rules,
-    images: r.images, availableFrom: r.available_from, availableUntil: r.available_until, status: r.status,
-    createdAt: r.created_at, updatedAt: r.updated_at,
-  }));
-  const ownerIds = [...new Set(items.map((i) => i.ownerId))];
-  const [{ data: people }, { data: rv }] = await Promise.all([
-    ownerIds.length ? sb.from("profiles").select("*").in("id", ownerIds) : Promise.resolve({ data: [] }),
-    items.length ? sb.from("reviews").select("*").in("item_id", items.map((i) => i.id)) : Promise.resolve({ data: [] }),
-  ]);
-  const profiles = new Map<string, Profile>((people ?? []).map((p) => [p.id, {
-    id: p.id, displayName: p.display_name, area: p.area, bio: p.bio, memberSince: p.member_since, isDemo: p.is_demo,
-  }]));
-  const reviews: Review[] = (rv ?? []).map((r) => ({
-    id: r.id, itemId: r.item_id, authorName: r.author_name, rating: r.rating, comment: r.comment, createdAt: r.created_at, isDemo: r.is_demo,
-  }));
-  return items.map((i) => summarise(i, profiles, reviews));
+  try {
+    const sb = createClient(url, key, { auth: { persistSession: false } });
+    const { data: rows, error } = await sb.from("items").select("*").eq("status", "active");
+    if (error || !rows) {
+      console.warn("Public catalog fetch error:", error?.message || error);
+      return fallback();
+    }
+    const items: Item[] = rows.map((r) => ({
+      id: r.id, ownerId: r.owner_id, title: r.title, description: r.description, category: r.category as CategorySlug,
+      dailyPriceSatang: r.daily_price_satang, location: r.location, condition: r.condition as ItemCondition, rules: r.rules,
+      images: r.images, availableFrom: r.available_from, availableUntil: r.available_until, status: r.status,
+      createdAt: r.created_at, updatedAt: r.updated_at,
+    }));
+    const ownerIds = [...new Set(items.map((i) => i.ownerId))];
+    const [{ data: people }, { data: rv }] = await Promise.all([
+      ownerIds.length ? sb.from("profiles").select("*").in("id", ownerIds) : Promise.resolve({ data: [] }),
+      items.length ? sb.from("reviews").select("*").in("item_id", items.map((i) => i.id)) : Promise.resolve({ data: [] }),
+    ]);
+    const profiles = new Map<string, Profile>((people ?? []).map((p) => [p.id, {
+      id: p.id, displayName: p.display_name, area: p.area, bio: p.bio, memberSince: p.member_since, isDemo: p.is_demo,
+    }]));
+    const reviews: Review[] = (rv ?? []).map((r) => ({
+      id: r.id, itemId: r.item_id, authorName: r.author_name, rating: r.rating, comment: r.comment, createdAt: r.created_at, isDemo: r.is_demo,
+    }));
+    return items.map((i) => summarise(i, profiles, reviews));
+  } catch (err) {
+    console.warn("Public catalog network error, falling back to seed items:", err);
+    return fallback();
+  }
 }

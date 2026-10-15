@@ -9,7 +9,8 @@ import { siteUrl } from "@/lib/site";
 import type { ItemSummary } from "@/lib/types";
 
 async function findPublicItem(id: string): Promise<ItemSummary | undefined> {
-  return (await getPublicCatalog()).find((i) => i.id === id);
+  const catalog = await getPublicCatalog().catch(() => []);
+  return catalog.find((i) => i.id === id);
 }
 
 export async function generateMetadata({ params }: PageProps<"/items/[id]">): Promise<Metadata> {
