@@ -147,5 +147,17 @@ begin
   return v_booking;
 end $$;
 
+-- Updated item_blocked_ranges to block items during active rental lifecycle
+create or replace function public.item_blocked_ranges(p_item_ids uuid[] default null)
+returns table (item_id uuid, start_date date, end_date date)
+language sql stable security definer set search_path = public as $$
+  select b.item_id, b.start_date, b.end_date
+  from public.bookings b
+  where b.status in ('confirmed', 'approved', 'escrow_held', 'picked_up')
+    and b.end_date >= public.app_today()
+    and (p_item_ids is null or b.item_id = any (p_item_ids))
+$$;
+
 grant execute on function public.deposit_wallet(bigint) to authenticated;
 grant execute on function public.withdraw_wallet(bigint, text) to authenticated;
+grant execute on function public.item_blocked_ranges(uuid[]) to anon, authenticated;

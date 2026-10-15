@@ -16,7 +16,8 @@ describe("who can rate, and when", () => {
   it("only after the return date has passed", () => {
     expect(ratingEligibility({ ...booking, endDate: TODAY }, "renter", TODAY, [])).toMatchObject({ canRate: false, reason: expect.stringMatching(/after the return date/) });
   });
-  it("only for confirmed rentals", () => {
+  it("only for confirmed or completed rentals", () => {
+    expect(ratingEligibility({ ...booking, status: "completed" }, "renter", TODAY, [])).toMatchObject({ canRate: true });
     expect(ratingEligibility({ ...booking, status: "cancelled" }, "renter", TODAY, [])).toMatchObject({ canRate: false });
     expect(ratingEligibility({ ...booking, status: "pending" }, "renter", TODAY, [])).toMatchObject({ canRate: false });
   });

@@ -41,7 +41,8 @@ export function ratingEligibility(
   const isRenter = actorId === booking.renterId;
   const isOwner = actorId === booking.ownerId;
   if (!isRenter && !isOwner) return { canRate: false, reason: "Only the renter and owner can rate this rental." };
-  if (booking.status !== "confirmed") return { canRate: false, reason: "Only confirmed rentals can be rated." };
+  const ratableStatuses: Booking["status"][] = ["confirmed", "completed", "returned", "picked_up"];
+  if (!ratableStatuses.includes(booking.status)) return { canRate: false, reason: "Only active or finished rentals can be rated." };
   if (booking.endDate >= today) return { canRate: false, reason: "You can rate after the return date." };
   const deadline = addDays(booking.endDate, RATING_WINDOW_DAYS);
   if (today > deadline) return { canRate: false, reason: "The rating period for this rental has ended." };

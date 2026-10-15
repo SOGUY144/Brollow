@@ -76,8 +76,9 @@ function allItems(state: DemoState): Item[] {
 }
 
 function blocked(state: DemoState, excludeId?: string): BlockedRange[] {
+  const activeStatuses: BookingStatus[] = ["confirmed", "approved", "escrow_held", "picked_up"];
   return state.bookings
-    .filter((b) => b.status === "confirmed" && b.id !== excludeId)
+    .filter((b) => activeStatuses.includes(b.status) && b.id !== excludeId)
     .map(({ itemId, startDate, endDate }) => ({ itemId, startDate, endDate }));
 }
 
@@ -146,7 +147,11 @@ export function createDemoApi(): DataApi {
       const availability = checkAvailability(item, startDate, endDate, blocked(state));
       if (!availability.available) throw new DataError("The item isn't available for those dates.");
       const duplicate = state.bookings.some(
-        (b) => b.itemId === itemId && b.renterId === DEMO_USER_ID && (b.status === "pending" || b.status === "confirmed") &&
+        (b) =>
+          b.itemId === itemId &&
+          b.renterId === DEMO_USER_ID &&
+          b.status !== "cancelled" &&
+          b.status !== "declined" &&
           rangesOverlap(b.startDate, b.endDate, startDate, endDate),
       );
       if (duplicate) throw new DataError("You already have a request for this item on overlapping dates.");

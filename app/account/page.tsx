@@ -25,7 +25,7 @@ function Overview() {
   const stats = useLoad(async () => {
     const [mine, incoming, listings] = await Promise.all([api.listMyBookings(), api.listIncomingRequests(), api.listMyListings()]);
     return {
-      requests: mine.filter((b) => b.status === "pending" || b.status === "confirmed").length,
+      requests: mine.filter((b) => b.status !== "cancelled" && b.status !== "completed").length,
       incoming: incoming.filter((b) => b.status === "pending").length,
       listings: listings.length,
     };
