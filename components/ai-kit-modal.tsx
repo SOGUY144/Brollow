@@ -175,14 +175,14 @@ export function AiKitModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl bg-white dark:bg-[#19221b] border border-border shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-200">
-        {/* Header - Star icon removed per user request */}
-        <div className="flex items-center justify-between border-b px-5 py-4 bg-muted/30">
+      <div className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl bg-white border border-[#e2e8d8] shadow-2xl overflow-hidden text-[#1b2b22] animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#e8eee0] px-5 py-4 bg-[#fbfcf9]">
           <div>
-            <h2 id="ai-kit-title" className="text-base font-semibold leading-none text-foreground">
+            <h2 id="ai-kit-title" className="text-base font-semibold leading-none text-[#1b2b22]">
               Brollow AI · Smart Kit Builder
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-[#5f6e65] mt-1">
               Describe your project. AI curates and bundles the right equipment within your budget.
             </p>
           </div>
@@ -190,7 +190,7 @@ export function AiKitModal({
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="rounded-lg p-1.5 text-[#5f6e65] hover:bg-[#edf2e4] hover:text-[#1b2b22] transition-colors"
           >
             <X className="size-4" />
           </button>
@@ -207,7 +207,7 @@ export function AiKitModal({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="e.g. Shooting a 2-person indoor interview, budget ฿1,200 / day"
-                className="w-full h-11 pl-4 pr-32 rounded-xl border border-input bg-background text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 shadow-xs"
+                className="w-full h-11 pl-4 pr-32 rounded-xl border border-[#d8e0ce] bg-white text-sm text-[#1b2b22] placeholder:text-[#88968d] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
               />
               <Button
                 type="submit"
@@ -228,7 +228,7 @@ export function AiKitModal({
 
             {/* Quick Inspiration Chips */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">
+              <p className="text-xs font-medium text-[#5f6e65] mb-1.5">
                 Quick Prompts:
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -237,7 +237,7 @@ export function AiKitModal({
                     key={item.label}
                     type="button"
                     onClick={() => handleQuickPromptClick(item.prompt)}
-                    className="inline-flex items-center text-xs px-2.5 py-1 rounded-full border border-border/80 bg-muted/30 hover:bg-muted text-foreground transition-colors"
+                    className="inline-flex items-center text-xs px-2.5 py-1 rounded-full border border-[#dce3d2] bg-[#f4f7ee] hover:bg-[#eaf0df] text-[#2c3d31] font-medium transition-colors cursor-pointer"
                   >
                     {item.label}
                   </button>
@@ -250,7 +250,7 @@ export function AiKitModal({
           {isAnalyzing && (
             <div className="py-10 flex flex-col items-center justify-center gap-2 text-center">
               <Loader2 className="size-6 text-primary animate-spin" />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#5f6e65]">
                 Analyzing inventory, gear synergies, and optimal pricing...
               </p>
             </div>
@@ -260,32 +260,32 @@ export function AiKitModal({
           {!isAnalyzing && result && (
             <div className="space-y-4 animate-in fade-in duration-200">
               {/* Kit Summary Banner */}
-              <div className="rounded-xl border border-border/80 bg-[#f8f9f5] dark:bg-muted/30 p-4 space-y-2.5">
+              <div className="rounded-xl border border-[#d5e0be] bg-[#f4f8ed] p-4 space-y-2.5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#124e3b] bg-[#e3edc8] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#124e3b] bg-[#e3edc8] border border-[#d2deba] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                       Recommended Bundle
                     </span>
-                    <h3 className="text-base font-bold text-foreground mt-1.5">
+                    <h3 className="text-base font-bold text-[#153426] mt-1.5">
                       {result.kitName}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
+                    <p className="text-xs text-[#4e6054] mt-0.5 max-w-md">
                       {result.description}
                     </p>
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className="text-xs text-muted-foreground">Total Daily Rate</p>
-                    <p className="text-lg font-bold text-foreground">
+                    <p className="text-xs text-[#5f6e65]">Total Daily Rate</p>
+                    <p className="text-lg font-bold text-[#153426]">
                       {formatMoney(result.totalDailyPriceSatang)}
-                      <span className="text-xs font-normal text-muted-foreground"> / day</span>
+                      <span className="text-xs font-normal text-[#5f6e65]"> / day</span>
                     </p>
                     {result.targetBudgetSatang !== null && (
                       <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md mt-1 ${
+                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md mt-1 border ${
                           result.withinBudget
-                            ? "bg-[#e3edc8] text-[#124e3b]"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                            ? "bg-[#e3edc8] text-[#124e3b] border-[#d2deba]"
+                            : "bg-[#fef3c7] text-[#92400e] border-[#fde68a]"
                         }`}
                       >
                         <CheckCircle2 className="size-2.5" />
@@ -299,14 +299,14 @@ export function AiKitModal({
 
                 {/* Why this kit? */}
                 {result.reasons.length > 0 && (
-                  <div className="border-t border-border/70 pt-2.5 mt-2">
-                    <p className="text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                  <div className="border-t border-[#d8e3c4] pt-2.5 mt-2">
+                    <p className="text-xs font-semibold text-[#1e3327] mb-1.5 flex items-center gap-1.5">
                       <Layers className="size-3 text-primary" />
                       Why this kit fits your project:
                     </p>
                     <ul className="space-y-1">
                       {result.reasons.map((r, i) => (
-                        <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                        <li key={i} className="text-xs text-[#3b4c41] flex items-start gap-1.5">
                           <CheckCircle2 className="size-3.5 text-primary shrink-0 mt-0.5" />
                           <span>{r}</span>
                         </li>
@@ -318,7 +318,7 @@ export function AiKitModal({
 
               {/* Bundled Equipment List */}
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <h4 className="text-xs font-semibold text-[#5f6e65] uppercase tracking-wider">
                   Equipment in this Bundle ({result.items.length} items)
                 </h4>
 
@@ -326,9 +326,9 @@ export function AiKitModal({
                   {result.items.map((item) => (
                     <div
                       key={item.id}
-                      className="group flex items-center gap-3 p-2.5 rounded-xl border border-border/70 bg-card hover:border-primary/50 transition-colors"
+                      className="group flex items-center gap-3 p-2.5 rounded-xl border border-[#e2e8d8] bg-white hover:border-primary/50 hover:shadow-xs transition-all"
                     >
-                      <div className="size-16 rounded-lg overflow-hidden shrink-0">
+                      <div className="size-16 rounded-lg overflow-hidden shrink-0 border border-[#e8eee0]">
                         <ItemImage
                           src={item.images[0]}
                           alt={item.title}
@@ -337,16 +337,16 @@ export function AiKitModal({
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h5 className="text-xs font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                        <h5 className="text-xs font-semibold text-[#1b2b22] line-clamp-1 group-hover:text-primary transition-colors">
                           {item.title}
                         </h5>
-                        <p className="text-[11px] text-muted-foreground line-clamp-1">
+                        <p className="text-[11px] text-[#5f6e65] line-clamp-1">
                           {item.location}
                         </p>
                         <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs font-bold text-foreground">
+                          <span className="text-xs font-bold text-[#153426]">
                             {formatMoney(item.dailyPriceSatang)}
-                            <span className="text-[10px] font-normal text-muted-foreground"> / day</span>
+                            <span className="text-[10px] font-normal text-[#5f6e65]"> / day</span>
                           </span>
                           <Link
                             href={`/items/${item.id}`}
@@ -367,7 +367,7 @@ export function AiKitModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t px-5 py-3 bg-muted/20">
+        <div className="flex items-center justify-between border-t border-[#e8eee0] px-5 py-3 bg-[#fbfcf9]">
           {result && (
             <Button
               type="button"
@@ -377,7 +377,7 @@ export function AiKitModal({
                 setPrompt("");
                 setTimeout(() => inputRef.current?.focus(), 50);
               }}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              className="text-xs text-[#5f6e65] hover:text-[#1b2b22] flex items-center gap-1 cursor-pointer"
             >
               <RotateCcw className="size-3" />
               <span>Clear prompt</span>
@@ -386,14 +386,20 @@ export function AiKitModal({
           {!result && <div />}
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} className="text-xs">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="text-xs border-[#d8e0ce] text-[#2c3d31] hover:bg-[#f4f7ee] cursor-pointer"
+            >
               Close
             </Button>
             {result && result.items.length > 0 && (
               <Link
                 href={`/items/${result.items[0].id}`}
                 onClick={onClose}
-                className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold inline-flex items-center gap-1 shadow-xs"
+                className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold inline-flex items-center gap-1 shadow-xs transition-colors"
               >
                 <span>Book Equipment</span>
                 <ArrowRight className="size-3" />
