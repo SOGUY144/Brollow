@@ -1,5 +1,5 @@
 import type { ValidListing } from "../domain/listing";
-import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, ItemSummary, Profile, Review } from "../types";
+import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, ItemSummary, Profile, RatingTag, Review, UserRating } from "../types";
 
 export type DataMode = "demo" | "live";
 
@@ -40,6 +40,10 @@ export interface DataApi {
   listMyBookings(): Promise<BookingWithItem[]>;
   listIncomingRequests(): Promise<BookingWithItem[]>;
   setBookingStatus(bookingId: string, to: BookingStatus): Promise<void>;
+
+  /** Ratings are public: anyone can read a person's reputation. */
+  listRatings(filter: { rateeIds?: string[]; bookingIds?: string[] }): Promise<UserRating[]>;
+  submitRating(input: { bookingId: string; score: number; tags: RatingTag[]; comment: string }): Promise<UserRating>;
 
   listMyListings(): Promise<Item[]>;
   createListing(value: ValidListing, photos: File[]): Promise<Item>;

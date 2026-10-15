@@ -14,9 +14,20 @@ const STATUS_STYLE = {
   cancelled: "bg-muted text-muted-foreground",
 } as const;
 
-export function BookingRow({ booking, who, actions }: { booking: BookingWithItem; who: string; actions?: React.ReactNode }) {
+export function BookingRow({
+  booking, who, actions, reputation, footer,
+}: {
+  booking: BookingWithItem;
+  who: string;
+  actions?: React.ReactNode;
+  /** The other person's reputation, shown under their name. */
+  reputation?: React.ReactNode;
+  /** Full-width area below the row, e.g. the rating form. */
+  footer?: React.ReactNode;
+}) {
   return (
-    <li className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center">
+    <li className="rounded-xl border bg-card p-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="w-full shrink-0 sm:w-28">
         <ItemImage src={booking.item?.images[0]} alt={booking.item?.title ?? "Removed item"} category={booking.item?.category ?? "electronics"} className="rounded-lg" />
       </div>
@@ -34,9 +45,12 @@ export function BookingRow({ booking, who, actions }: { booking: BookingWithItem
           <span className="font-medium text-foreground">{formatMoney(booking.totalSatang)}</span>
         </p>
         <p className="text-muted-foreground">{who}: {booking.counterpart?.displayName ?? "Unknown"}</p>
+        {reputation}
         {booking.message && <p className="italic text-muted-foreground">“{booking.message}”</p>}
       </div>
-      {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+    </div>
+    {footer && <div className="mt-3 border-t pt-3">{footer}</div>}
     </li>
   );
 }

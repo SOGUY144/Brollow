@@ -8,6 +8,7 @@ import { AccountShell } from "@/components/account-shell";
 import { errorMessage, useData } from "@/components/data-provider";
 import { Button } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
+import { RatingList, ReputationLine, useReputations } from "@/components/reputation";
 
 export default function AccountPage() {
   return (
@@ -69,6 +70,8 @@ function Overview() {
         {mode === "live" && <Button variant="outline" className="mt-4 h-9" onClick={signOut}>Log out</Button>}
       </div>
 
+      <YourReputation userId={viewer!.id} />
+
       {stats.status === "error" && <p role="alert" className="text-sm text-destructive">{stats.message}</p>}
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
@@ -98,5 +101,23 @@ function Overview() {
         </section>
       )}
     </div>
+  );
+}
+
+function YourReputation({ userId }: { userId: string }) {
+  const reps = useReputations([userId]);
+  if (reps.status !== "ready") return null;
+  const rep = reps.data.reputations.get(userId)!;
+  return (
+    <section aria-labelledby="rep-title" className="space-y-3 rounded-xl border bg-card p-5">
+      <h2 id="rep-title" className="font-semibold">Your reputation</h2>
+      <p className="text-sm text-muted-foreground">Renters rate you after borrowing your items, and owners rate you after you return theirs.</p>
+      <div className="space-y-1">
+        <ReputationLine rep={rep.asOwner} role="owner" />
+        <ReputationLine rep={rep.asRenter} role="renter" />
+      </div>
+      <RatingList ratings={reps.data.ratings} role="owner" limit={2} />
+      <RatingList ratings={reps.data.ratings} role="renter" limit={2} />
+    </section>
   );
 }

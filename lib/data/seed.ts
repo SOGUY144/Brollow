@@ -1,6 +1,6 @@
 import credits from "../../public/images/items/credits.json";
 import { addDays } from "../domain/dates";
-import type { Booking, CategorySlug, IsoDate, Item, ItemCondition, Profile, Review } from "../types";
+import type { Booking, CategorySlug, IsoDate, Item, ItemCondition, Profile, RatingTag, Review, UserRating } from "../types";
 
 /**
  * Fictional demo content. Every profile and review here is marked isDemo and
@@ -213,5 +213,48 @@ export function seedBookings(today: IsoDate): Booking[] {
     make("bk-seed-5", "mus-04", "u-marcus", 10, 11, "pending", "Birthday party set."),
     make("bk-seed-6", "cam-02", DEMO_USER_ID, 14, 15, "pending", "Shooting a short film."),
     make("bk-seed-7", "camp-01", DEMO_USER_ID, 20, 22, "confirmed", "Lake District weekend."),
+    // Finished rentals, so the demo user can try rating both sides.
+    make("bk-seed-8", "camp-03", DEMO_USER_ID, -10, -8, "confirmed", "Weekend in the Peak District."),
+    make("bk-seed-9", "tool-01", "u-hannah", -6, -5, "confirmed", "Hanging a few shelves."),
   ];
+}
+
+type SeedRating = [raterId: string, rateeId: string, role: UserRating["role"], score: number, tags: RatingTag[], comment: string];
+
+/** Earlier ratings between fictional users, so profiles show a reputation. */
+const RATINGS: SeedRating[] = [
+  ["u-tom", "u-priya", "owner", 5, ["on_time", "as_described", "fair_charges"], "Camera was spotless and she explained every setting."],
+  ["u-leah", "u-priya", "owner", 5, ["on_time", "communicative"], "Quick replies and an easy pickup."],
+  ["u-sam", "u-tom", "owner", 4, ["as_described", "fair_charges"], "Tent had a small tear that was already listed. No fuss at return."],
+  ["u-callum", "u-tom", "owner", 5, ["on_time", "as_described", "communicative"], "Ready on time with all the pegs counted."],
+  ["u-fiona", "u-hannah", "owner", 5, ["as_described", "fair_charges"], "Bike was set up for my height before I arrived."],
+  ["u-priya", "u-sam", "owner", 5, ["on_time", "as_described", "fair_charges", "communicative"], "Lens in perfect condition."],
+  ["u-marcus", "u-fiona", "owner", 4, ["communicative"], "Pickup moved by a day but she let me know early."],
+  ["u-hannah", "u-marcus", "owner", 5, ["on_time", "as_described", "fair_charges"], "Board and pump exactly as shown."],
+  ["u-tom", "u-leah", "owner", 3, ["communicative"], "Gazebo was missing two weights; she sorted it the next day."],
+  ["u-priya", "u-callum", "owner", 5, ["on_time", "fair_charges"], "Smooth rental, no extra charges."],
+  ["u-tom", DEMO_USER_ID, "owner", 5, ["on_time", "as_described"], "Light kit was charged and ready."],
+  ["u-priya", "u-tom", "renter", 5, ["returned_on_time", "good_care"], "Returned clean and on time."],
+  ["u-sam", "u-priya", "renter", 5, ["returned_on_time", "good_care", "communicative"], "Would happily lend to her again."],
+  ["u-tom", "u-callum", "renter", 4, ["good_care"], "Returned a few hours late, but in great condition."],
+  ["u-hannah", "u-fiona", "renter", 5, ["returned_on_time", "good_care"], "Looked after the bike really well."],
+  ["u-marcus", "u-hannah", "renter", 5, ["returned_on_time", "communicative"], "Kept me updated the whole time."],
+  ["u-callum", DEMO_USER_ID, "renter", 5, ["returned_on_time", "good_care"], "Stove came back cleaner than it left."],
+];
+
+export function seedRatings(): UserRating[] {
+  const names = new Map(SEED_PROFILES.map((p) => [p.id, p.displayName]));
+  return RATINGS.map(([raterId, rateeId, role, score, tags, comment], i) => ({
+    id: `rt-seed-${i + 1}`,
+    bookingId: `bk-history-${i + 1}`,
+    raterId,
+    raterName: names.get(raterId) ?? "Someone",
+    rateeId,
+    role,
+    score,
+    tags,
+    comment,
+    createdAt: new Date(Date.parse(SEED_CREATED_AT) - (i + 1) * 86_400_000 * 3).toISOString(),
+    isDemo: true,
+  }));
 }
