@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, CheckCircle2, Lock, RotateCcw } from "lucide-react";
+import { Camera, CheckCircle2, FileText, Lock, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { ReputationLine, Stars } from "@/components/reputation";
 import { errorMessage, useData } from "@/components/data-provider";
 import { HandoverModal } from "@/components/handover-modal";
 import { PaymentModal } from "@/components/payment-modal";
+import { RentalReceiptModal } from "@/components/rental-receipt-modal";
 import { Button } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
 import { allowedActions } from "@/lib/domain/bookings";
@@ -44,6 +45,7 @@ function Bookings() {
   const [busy, setBusy] = useState<string | null>(null);
   const [payingBooking, setPayingBooking] = useState<BookingWithItem | null>(null);
   const [inspectingBooking, setInspectingBooking] = useState<BookingWithItem | null>(null);
+  const [receiptBooking, setReceiptBooking] = useState<BookingWithItem | null>(null);
 
   async function act(id: string, to: BookingStatus, details?: { pickupPhotoUrl?: string; pickupNote?: string }) {
     if (to === "cancelled" && !window.confirm("Cancel this booking?")) return;
@@ -144,6 +146,19 @@ function Bookings() {
           </span>
         )}
 
+        {/* View Receipt */}
+        {["escrow_held", "picked_up", "returned", "completed"].includes(b.status) && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-brand-soft flex items-center gap-1.5"
+            onClick={() => setReceiptBooking(b)}
+          >
+            <FileText className="size-3.5" />
+            View Receipt
+          </Button>
+        )}
+
         {/* Cancel option */}
         {actions.includes("cancelled") && (
           <Button
@@ -235,6 +250,19 @@ function Bookings() {
           <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
             <CheckCircle2 className="size-3.5" /> Rental Completed
           </span>
+        )}
+
+        {/* View Receipt */}
+        {["escrow_held", "picked_up", "returned", "completed"].includes(b.status) && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-brand-soft flex items-center gap-1.5"
+            onClick={() => setReceiptBooking(b)}
+          >
+            <FileText className="size-3.5" />
+            View Receipt
+          </Button>
         )}
 
         {/* Cancel option */}
@@ -352,6 +380,16 @@ function Bookings() {
               pickupNote: note,
             });
           }}
+        />
+      )}
+
+      {/* Rental Agreement & Receipt Modal */}
+      {receiptBooking && (
+        <RentalReceiptModal
+          booking={receiptBooking}
+          isOpen={!!receiptBooking}
+          onClose={() => setReceiptBooking(null)}
+          viewerId={viewer?.id ?? ""}
         />
       )}
     </div>
