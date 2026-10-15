@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, History, Landmark, Plus, QrCode, Shield, ShieldCheck, Wallet as WalletIcon, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, History, Plus, QrCode, ShieldCheck, Wallet as WalletIcon, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { errorMessage, useData } from "@/components/data-provider";

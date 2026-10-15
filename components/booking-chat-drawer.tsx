@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import type { BookingWithItem, DataApi } from "@/lib/data/api";
-import { formatMessageTimestamp, groupMessagesByDate } from "@/lib/domain/messaging";
+import { formatMessageTimestamp, groupMessagesByDate, validateMessageText } from "@/lib/domain/messaging";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import type { ChatMessage } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ export function BookingChatDrawer({
   const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const isViewerOwner = currentViewerId === booking.ownerId;
   const counterpartRole = isViewerOwner ? "Renter" : "Owner";
@@ -67,13 +67,18 @@ export function BookingChatDrawer({
         const data = await api.listMessages(booking.id);
         if (isMounted) {
           setMessages((prev) => {
+            const existingIds = new Set(data.map((m) => m.id));
+            const pendingLocal = prev.filter(
+              (m) => !existingIds.has(m.id) && m.bookingId === booking.id
+            );
+            const merged = [...data, ...pendingLocal];
             if (
-              prev.length === data.length &&
-              prev[prev.length - 1]?.id === data[data.length - 1]?.id
+              prev.length === merged.length &&
+              prev[prev.length - 1]?.id === merged[merged.length - 1]?.id
             ) {
               return prev;
             }
-            return data;
+            return merged;
           });
         }
       } catch (err) {
@@ -123,15 +128,22 @@ export function BookingChatDrawer({
 
   async function handleSend(e?: React.FormEvent) {
     if (e) e.preventDefault();
-    const textToSend = inputText.trim();
-    if (!textToSend || isSending) return;
+    const validation = validateMessageText(inputText);
+    if (!validation.valid) {
+      if (inputText.trim()) setError(validation.error ?? "Invalid message");
+      return;
+    }
+    if (isSending) return;
 
     setIsSending(true);
     setError(null);
 
     try {
-      const newMsg = await api.sendMessage(booking.id, textToSend);
-      setMessages((prev) => [...prev, newMsg]);
+      const newMsg = await api.sendMessage(booking.id, validation.cleanText);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg];
+      });
       setInputText("");
       inputRef.current?.focus();
     } catch (err) {
@@ -294,15 +306,21 @@ export function BookingChatDrawer({
           {/* Footer Input */}
           <div className="p-3 border-t bg-card">
             <form onSubmit={handleSend} className="flex items-center gap-2">
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
+                rows={1}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Type a message..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSend();
+                  }
+                }}
+                placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
                 maxLength={1000}
                 disabled={isSending}
-                className="flex-1 rounded-xl border border-input bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50"
+                className="flex-1 resize-none min-h-[40px] max-h-28 rounded-xl border border-input bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50"
               />
               <Button
                 type="submit"

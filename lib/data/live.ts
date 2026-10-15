@@ -3,7 +3,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { photoError } from "../domain/listing";
-import type { BlockedRange, Booking, CategorySlug, ChatMessage, Item, ItemCondition, Profile, RatingRole, RatingTag, Review, UserRating, Wallet, WalletTransaction } from "../types";
+import type { BlockedRange, Booking, CategorySlug, ChatMessage, Item, ItemCondition, Profile, RatingRole, RatingTag, Review, UserRating, Wallet } from "../types";
 import { DataError, summarise, type BookingWithItem, type DataApi } from "./api";
 
 /* Row shapes as stored in Postgres (see supabase/migrations). */
@@ -83,6 +83,7 @@ export function liveConfig(): { url: string; key: string } | null {
 
 export function createLiveApi(url: string, key: string): DataApi {
   const sb: SupabaseClient = createBrowserClient(url, key);
+  const initialNoteCache = new Map<string, ChatMessage | null>();
 
   async function uid(): Promise<string> {
     const { data } = await sb.auth.getUser();
@@ -348,34 +349,49 @@ export function createLiveApi(url: string, key: string): DataApi {
 
     async listMessages(bookingId: string): Promise<ChatMessage[]> {
       try {
-        const [{ data: msgs, error }, { data: booking }] = await Promise.all([
-          sb.from("messages").select("*").eq("booking_id", bookingId).order("created_at", { ascending: true }),
-          sb.from("bookings").select("id, renter_id, message, created_at").eq("id", bookingId).maybeSingle(),
-        ]);
+        let initialMsg = initialNoteCache.get(bookingId);
+        if (initialMsg === undefined) {
+          const { data: booking } = await sb
+            .from("bookings")
+            .select("id, renter_id, message, created_at")
+            .eq("id", bookingId)
+            .maybeSingle();
+
+          if (booking && booking.message?.trim()) {
+            const { data: renterProfile } = await sb
+              .from("profiles")
+              .select("display_name")
+              .eq("id", booking.renter_id)
+              .maybeSingle();
+
+            initialMsg = {
+              id: `msg-init-${booking.id}`,
+              bookingId: booking.id,
+              senderId: booking.renter_id,
+              senderName: renterProfile?.display_name ?? "Renter",
+              senderRole: "renter",
+              text: booking.message.trim(),
+              createdAt: booking.created_at,
+            };
+          } else {
+            initialMsg = null;
+          }
+          initialNoteCache.set(bookingId, initialMsg);
+        }
+
+        const { data: msgs, error } = await sb
+          .from("messages")
+          .select("*")
+          .eq("booking_id", bookingId)
+          .order("created_at", { ascending: true });
 
         if (error && error.code !== "42P01") {
           console.warn("Could not load remote messages:", error.message);
         }
 
         const result: ChatMessage[] = [];
-
-        // Synthesize initial booking note if present
-        if (booking && booking.message?.trim()) {
-          const { data: renterProfile } = await sb
-            .from("profiles")
-            .select("display_name")
-            .eq("id", booking.renter_id)
-            .maybeSingle();
-
-          result.push({
-            id: `msg-init-${booking.id}`,
-            bookingId: booking.id,
-            senderId: booking.renter_id,
-            senderName: renterProfile?.display_name ?? "Renter",
-            senderRole: "renter",
-            text: booking.message.trim(),
-            createdAt: booking.created_at,
-          });
+        if (initialMsg) {
+          result.push(initialMsg);
         }
 
         if (msgs && Array.isArray(msgs)) {

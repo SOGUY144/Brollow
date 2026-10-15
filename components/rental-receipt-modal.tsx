@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { CheckCircle2, FileText, Lock, Printer, ShieldCheck, X } from "lucide-react";
 import type { BookingWithItem } from "@/lib/data/api";
 import { formatDate, formatDateRange, formatMoney, pluralDays } from "@/lib/format";
@@ -10,16 +11,28 @@ interface RentalReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
   viewerId: string;
+  viewerName?: string;
 }
 
-export function RentalReceiptModal({ booking, isOpen, onClose, viewerId }: RentalReceiptModalProps) {
+export function RentalReceiptModal({ booking, isOpen, onClose, viewerId, viewerName }: RentalReceiptModalProps) {
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isRenter = viewerId === booking.renterId;
   const isOwner = viewerId === booking.ownerId;
   const otherName = booking.counterpart?.displayName ?? (isRenter ? "Owner" : "Renter");
-  const renterName = isRenter ? "You" : otherName;
-  const ownerName = isOwner ? "You" : otherName;
+  const myName = viewerName?.trim() || "You";
+  const renterName = isRenter ? myName : otherName;
+  const ownerName = isOwner ? myName : otherName;
   const refCode = `#BROL-BK-${booking.id.slice(0, 8).toUpperCase()}`;
 
   function handlePrint() {
@@ -33,6 +46,15 @@ export function RentalReceiptModal({ booking, isOpen, onClose, viewerId }: Renta
         @media print {
           body * {
             visibility: hidden;
+          }
+          .receipt-modal-backdrop,
+          .receipt-modal-container {
+            position: static !important;
+            overflow: visible !important;
+            max-height: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
           }
           #rental-receipt-document,
           #rental-receipt-document * {
@@ -57,8 +79,14 @@ export function RentalReceiptModal({ booking, isOpen, onClose, viewerId }: Renta
         }
       `}</style>
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in overflow-y-auto">
-        <div className="relative w-full max-w-2xl my-8 rounded-2xl border bg-card p-6 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto">
+      <div
+        className="receipt-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="receipt-modal-container relative w-full max-w-2xl my-8 rounded-2xl border bg-card p-6 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Action Header (No-Print) */}
           <div className="no-print flex items-center justify-between pb-4 mb-4 border-b">
             <div className="flex items-center gap-2 text-primary font-semibold text-sm">
@@ -206,7 +234,7 @@ export function RentalReceiptModal({ booking, isOpen, onClose, viewerId }: Renta
                   <span className="text-base text-primary font-bold">{formatMoney(booking.totalSatang)}</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground pt-1">
-                  Payment Method: Escrow Deposit via Mock PromptPay / Card / Wallet
+                  Payment Method: Escrow Deposit via PromptPay / Card / Brollow Wallet
                 </p>
               </div>
             </div>
@@ -219,6 +247,7 @@ export function RentalReceiptModal({ booking, isOpen, onClose, viewerId }: Renta
                   <span>Verified Handover Inspection Proof</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 items-start">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={booking.pickupPhotoUrl}
                     alt="Handover inspection proof"

@@ -400,7 +400,7 @@ export function createDemoApi(): DataApi {
       }
 
       if (!state.messages[bookingId]) {
-        await this.listMessages(bookingId);
+        state.messages[bookingId] = await this.listMessages(bookingId);
       }
 
       const isOwner = booking.ownerId === DEMO_VIEWER.id;

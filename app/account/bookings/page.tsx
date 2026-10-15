@@ -418,6 +418,7 @@ function Bookings() {
           isOpen={!!receiptBooking}
           onClose={() => setReceiptBooking(null)}
           viewerId={viewer?.id ?? ""}
+          viewerName={viewer?.displayName}
         />
       )}
 
