@@ -40,28 +40,28 @@ const SCENARIOS: ScenarioTemplate[] = [
       "reels",
       "ยูทูป",
     ],
-    kitName: "Pro Creator & Vlog Kit",
-    description: "Complete all-in-one setup for crisp 4K visual storytelling, wireless broadcast audio, and stable framing.",
+    kitName: "Creator & Video Vlog Kit",
+    description: "Complete setup for high-quality video storytelling, clear speech audio, and illumination.",
     defaultReasons: [
       "High-resolution camera captures crisp video in any lighting condition.",
-      "Wireless mic system guarantees crystal-clear voice clarity with zero cable clutter.",
-      "Sturdy tripod ensures ultra-smooth pan shots and stable framing.",
+      "Wireless mic system guarantees crystal-clear voice clarity.",
+      "Video light kit ensures balanced illumination for indoor and evening shoots.",
     ],
     slots: [
       {
         categoryHint: "cameras-photography",
-        keywords: ["camera", "sony", "canon", "fuji", "lumix", "กล้อง"],
-        reason: "Full-frame high-resolution camera captures crisp video in any lighting.",
+        keywords: ["camera", "dslr", "mirrorless", "sony", "canon", "gopro", "กล้อง"],
+        reason: "High-resolution camera captures crisp video in any lighting.",
       },
       {
-        categoryHint: "electronics",
-        keywords: ["mic", "wireless", "dji", "rode", "ไมค์"],
-        reason: "Wireless microphone system guarantees crystal-clear speech without background noise.",
+        categoryHint: "party-equipment",
+        keywords: ["wireless mic", "mic", "microphone", "ไมค์", "speaker"],
+        reason: "Microphone captures clear vocal audio without background rumble.",
       },
       {
         categoryHint: "cameras-photography",
-        keywords: ["tripod", "gimbal", "stand", "ขาตั้ง"],
-        reason: "Video tripod provides ultra-smooth pan and tilt motion for professional framing.",
+        keywords: ["light", "led", "tripod", "gimbal", "ขาตั้ง", "ไฟ"],
+        reason: "Video lighting and support provides clean framing and professional exposure.",
       },
     ],
   },
@@ -79,21 +79,21 @@ const SCENARIOS: ScenarioTemplate[] = [
       "จัดรายการ",
     ],
     kitName: "Studio Podcast & Audio Kit",
-    description: "Broadcast-quality acoustic recording package tailored for two-person dialogues, interviews, and crisp voiceovers.",
+    description: "Broadcast-quality acoustic recording package tailored for dialogues, interviews, and crisp voiceovers.",
     defaultReasons: [
       "Dynamic vocal microphone captures rich vocal depth with minimal room echo.",
-      "Studio audio interface delivers high-gain clean amplification and dual-channel inputs.",
+      "Studio audio interface and sound reinforcement for clear playback and monitoring.",
     ],
     slots: [
       {
         categoryHint: "music-equipment",
-        keywords: ["shure", "mic", "microphone", "dynamic", "vocal", "ไมค์"],
-        reason: "Dynamic vocal microphone isolates your voice with studio warmth and zero background hiss.",
+        keywords: ["condenser", "microphone", "shure", "mic", "vocal", "ไมค์"],
+        reason: "Studio microphone captures rich vocal presence and crisp articulation.",
       },
       {
         categoryHint: "electronics",
-        keywords: ["interface", "scarlett", "focusrite", "audio", "mixer", "การ์ดเสียง"],
-        reason: "USB audio interface provides high-gain preamp headroom and dual-channel recording.",
+        keywords: ["interface", "scarlett", "focusrite", "speaker", "headphones", "pa", "audio", "ลำโพง", "หูฟัง"],
+        reason: "Audio interface and monitoring setup ensures accurate sound balance and feedback prevention.",
       },
     ],
   },
@@ -114,12 +114,11 @@ const SCENARIOS: ScenarioTemplate[] = [
       "ห้องประชุม",
       "นิทรรศการ",
     ],
-    kitName: "High-Impact Presentation & Seminar Kit",
-    description: "Reliable visual projection and high-fidelity speech amplification for conferences, workshops, and business meetings.",
+    kitName: "Presentation & Seminar Kit",
+    description: "Visual projection and speech amplification for workshops, lectures, and group presentations.",
     defaultReasons: [
       "High-lumen projector delivers sharp, readable slides even in ambient conference lighting.",
-      "Large portable projection screen ensures high contrast viewing for all attendees.",
-      "Loudspeaker provides loud and clear speech coverage across the room.",
+      "Loudspeaker or projection screen ensures high-contrast visual display and clear sound.",
     ],
     slots: [
       {
@@ -134,7 +133,7 @@ const SCENARIOS: ScenarioTemplate[] = [
       },
       {
         categoryHint: "party-equipment",
-        keywords: ["speaker", "jbl", "pa", "sound", "ลำโพง"],
+        keywords: ["speaker", "pa", "sound", "ลำโพง"],
         reason: "Loudspeaker provides loud and clear speech coverage across the room.",
       },
     ],
@@ -152,22 +151,22 @@ const SCENARIOS: ScenarioTemplate[] = [
       "นางแบบ",
       "สตูดิโอ",
     ],
-    kitName: "Pro Portrait & Graduation Photoshoot Kit",
-    description: "High-resolution camera and prime portrait optics optimized for glowing skin tones and creamy background blur.",
+    kitName: "Portrait & Graduation Photoshoot Kit",
+    description: "High-resolution camera and portrait optics optimized for natural skin tones and subject separation.",
     defaultReasons: [
-      "High-megapixel sensor captures rich textures and natural colors.",
-      "Fast aperture lens creates gorgeous depth-of-field separation.",
+      "High-megapixel sensor captures rich textures and vibrant colors.",
+      "Fast telephoto zoom lens delivers flattering facial compression and creamy background blur.",
     ],
     slots: [
       {
         categoryHint: "cameras-photography",
-        keywords: ["camera", "sony", "canon", "nikon", "กล้อง"],
-        reason: "High-resolution camera body ensures maximum dynamic range and snappy autofocus.",
+        keywords: ["camera", "sony", "canon", "กล้อง"],
+        reason: "High-resolution camera ensures maximum detail and fast autofocus.",
       },
       {
         categoryHint: "cameras-photography",
-        keywords: ["lens", "50mm", "85mm", "flash", "light", "reflector", "เลนส์"],
-        reason: "Prime optics deliver beautiful background bokeh and tack-sharp subject details.",
+        keywords: ["lens", "telephoto", "light", "zoom", "เลนส์", "ไฟ"],
+        reason: "Fast portrait lens provides natural subject isolation and creamy background blur.",
       },
     ],
   },
@@ -185,22 +184,28 @@ const SCENARIOS: ScenarioTemplate[] = [
       "กลางแจ้ง",
       "พักแรม",
     ],
-    kitName: "Weekend Outdoor Adventure & Camp Kit",
-    description: "Durable, weather-resistant outdoor gear designed for easy setup and unforgettable weekend getaways.",
+    kitName: "Weekend Camping & Outdoor Kit",
+    description: "Weather-resistant outdoor gear designed for easy campsite setup and outdoor comfort.",
     defaultReasons: [
-      "Spacious, weather-proof shelter keeps you dry and comfortable outdoors.",
-      "High-output outdoor sound and illumination elevate your campfire experience.",
+      "Spacious, weather-proof family shelter keeps you dry and comfortable outdoors.",
+      "Camping cookstove enables hot meals and outdoor cooking on the go.",
+      "Portable power supply keeps lights, devices, and small appliances running.",
     ],
     slots: [
       {
         categoryHint: "camping-outdoors",
-        keywords: ["tent", "เต็นท์", "camping"],
+        keywords: ["tent", "เต็นท์"],
         reason: "Spacious, weather-proof shelter keeps you dry and comfortable outdoors.",
       },
       {
         categoryHint: "camping-outdoors",
-        keywords: ["lantern", "light", "power", "stove", "chair", "เก้าอี้", "ไฟ"],
-        reason: "Reliable outdoor equipment keeps your campsite illuminated and comfortable.",
+        keywords: ["stove", "sleeping", "mat", "เตา", "ถุงนอน"],
+        reason: "Essential camping gear ensures warmth and convenient outdoor cooking.",
+      },
+      {
+        categoryHint: "electronics",
+        keywords: ["power", "station", "battery", "light", "ไฟ", "แบตเตอรี่"],
+        reason: "Portable power station keeps essential campsite lighting and gadgets powered.",
       },
     ],
   },
@@ -283,16 +288,22 @@ export function generateSmartKit(
   if (bestScenario && highestScore > 0) {
     // Fill scenario slots
     for (const slot of bestScenario.slots) {
-      const candidates = catalog.filter((item) => {
+      let candidates = catalog.filter((item) => {
         if (pickedIds.has(item.id)) return false;
         if (item.status && item.status !== "active") return false;
 
-        const text = `${item.title} ${item.description} ${item.category}`.toLowerCase();
-        const matchesKeyword = slot.keywords.some((kw) => text.includes(kw.toLowerCase()));
-        const matchesCategory = slot.categoryHint ? item.category === slot.categoryHint : false;
-
-        return matchesKeyword || matchesCategory;
+        const text = `${item.title} ${item.description}`.toLowerCase();
+        return slot.keywords.some((kw) => text.includes(kw.toLowerCase()));
       });
+
+      // Fallback to category if no keyword candidate matched
+      if (candidates.length === 0 && slot.categoryHint) {
+        candidates = catalog.filter((item) => {
+          if (pickedIds.has(item.id)) return false;
+          if (item.status && item.status !== "active") return false;
+          return item.category === slot.categoryHint;
+        });
+      }
 
       if (candidates.length > 0) {
         // Sort candidates by rating and keyword relevance
