@@ -3,7 +3,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { photoError } from "../domain/listing";
-import type { BlockedRange, Booking, CategorySlug, Item, ItemCondition, Profile, RatingRole, RatingTag, Review, UserRating, Wallet, WalletTransaction } from "../types";
+import type { BlockedRange, Booking, CategorySlug, ChatMessage, Item, ItemCondition, Profile, RatingRole, RatingTag, Review, UserRating, Wallet, WalletTransaction } from "../types";
 import { DataError, summarise, type BookingWithItem, type DataApi } from "./api";
 
 /* Row shapes as stored in Postgres (see supabase/migrations). */
@@ -31,6 +31,15 @@ interface WalletTxRow {
   id: string; user_id: string; amount_satang: number;
   type: "deposit" | "withdrawal" | "escrow_payout" | "rental_payment";
   reference_id?: string | null; description: string; created_at: string;
+}
+interface MessageRow {
+  id: string;
+  booking_id: string;
+  sender_id: string;
+  sender_name?: string | null;
+  sender_role: "renter" | "owner";
+  text: string;
+  created_at: string;
 }
 
 const toItem = (r: ItemRow): Item => ({
@@ -335,6 +344,76 @@ export function createLiveApi(url: string, key: string): DataApi {
     async withdrawWallet(amountSatang: number, destination: string): Promise<void> {
       const { error } = await sb.rpc("withdraw_wallet", { p_amount_satang: amountSatang, p_destination: destination });
       if (error) fail(error, "Couldn't complete withdrawal.");
+    },
+
+    async listMessages(bookingId: string): Promise<ChatMessage[]> {
+      try {
+        const { data, error } = await sb
+          .from("messages")
+          .select("*")
+          .eq("booking_id", bookingId)
+          .order("created_at", { ascending: true });
+
+        if (error) {
+          console.warn("Could not load remote messages:", error.message);
+          return [];
+        }
+        return ((data as MessageRow[] | null) ?? []).map((r) => ({
+          id: r.id,
+          bookingId: r.booking_id,
+          senderId: r.sender_id,
+          senderName: r.sender_name ?? "User",
+          senderRole: r.sender_role,
+          text: r.text,
+          createdAt: r.created_at,
+        }));
+      } catch (err) {
+        console.warn("Error fetching messages:", err);
+        return [];
+      }
+    },
+
+    async sendMessage(bookingId: string, text: string): Promise<ChatMessage> {
+      const userId = await uid();
+      const trimmed = text.trim();
+      if (!trimmed) throw new DataError("Message cannot be empty.");
+      if (trimmed.length > 1000) throw new DataError("Message must be 1000 characters or less.");
+
+      const { data: profile } = await sb.from("profiles").select("display_name").eq("id", userId).maybeSingle();
+      const senderName = profile?.display_name ?? "User";
+
+      const { data: booking } = await sb.from("bookings").select("renter_id, owner_id").eq("id", bookingId).maybeSingle();
+      const role: "renter" | "owner" = booking?.owner_id === userId ? "owner" : "renter";
+
+      const newMsgId = `msg-${crypto.randomUUID().slice(0, 8)}`;
+      const now = new Date().toISOString();
+
+      try {
+        const { error } = await sb.from("messages").insert({
+          id: newMsgId,
+          booking_id: bookingId,
+          sender_id: userId,
+          sender_name: senderName,
+          sender_role: role,
+          text: trimmed,
+          created_at: now,
+        });
+        if (error) {
+          console.warn("Could not insert message to remote table:", error.message);
+        }
+      } catch (err) {
+        console.warn("Error inserting message:", err);
+      }
+
+      return {
+        id: newMsgId,
+        bookingId,
+        senderId: userId,
+        senderName,
+        senderRole: role,
+        text: trimmed,
+        createdAt: now,
+      };
     },
   };
 }

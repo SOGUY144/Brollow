@@ -6,7 +6,7 @@ import { rangesOverlap, todayInAppTz, validateRentalDates } from "../domain/date
 import type { ValidListing } from "../domain/listing";
 import { quoteRental } from "../domain/pricing";
 import { ratingEligibility, validateRating } from "../domain/ratings";
-import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, Profile, UserRating, Wallet, WalletTransaction } from "../types";
+import type { BlockedRange, Booking, BookingStatus, ChatMessage, Item, ItemStatus, Profile, UserRating, Wallet, WalletTransaction } from "../types";
 import { DataError, summarise, type BookingWithItem, type DataApi, type Viewer } from "./api";
 import { compressImage } from "./images";
 import { DEMO_USER_ID, SEED_PROFILES, seedBookings, seedItems, seedRatings, seedReviews } from "./seed";
@@ -25,6 +25,7 @@ interface DemoState {
   ratings: UserRating[];
   walletBalanceSatang: number;
   walletTransactions: WalletTransaction[];
+  messages?: Record<string, ChatMessage[]>;
 }
 
 function freshState(): DemoState {
@@ -45,6 +46,7 @@ function freshState(): DemoState {
         createdAt: new Date().toISOString(),
       },
     ],
+    messages: {},
   };
 }
 
@@ -354,6 +356,69 @@ export function createDemoApi(): DataApi {
         createdAt: new Date().toISOString(),
       });
       save(state);
+    },
+
+    async listMessages(bookingId: string): Promise<ChatMessage[]> {
+      const state = load();
+      state.messages = state.messages ?? {};
+      if (!state.messages[bookingId]) {
+        const booking = state.bookings.find((b) => b.id === bookingId);
+        if (booking && booking.message?.trim()) {
+          const renterProfile = profiles.get(booking.renterId);
+          state.messages[bookingId] = [
+            {
+              id: `msg-init-${booking.id}`,
+              bookingId: booking.id,
+              senderId: booking.renterId,
+              senderName: renterProfile?.displayName ?? "Renter",
+              senderRole: "renter",
+              text: booking.message.trim(),
+              createdAt: booking.createdAt,
+            },
+          ];
+          save(state);
+        } else {
+          state.messages[bookingId] = [];
+        }
+      }
+      return state.messages[bookingId];
+    },
+
+    async sendMessage(bookingId: string, text: string): Promise<ChatMessage> {
+      const state = load();
+      state.messages = state.messages ?? {};
+      const booking = state.bookings.find((b) => b.id === bookingId);
+      if (!booking) {
+        throw new DataError("Booking not found.");
+      }
+      const trimmed = text.trim();
+      if (!trimmed) {
+        throw new DataError("Message cannot be empty.");
+      }
+      if (trimmed.length > 1000) {
+        throw new DataError("Message must be 1000 characters or less.");
+      }
+
+      if (!state.messages[bookingId]) {
+        await this.listMessages(bookingId);
+      }
+
+      const isOwner = booking.ownerId === DEMO_VIEWER.id;
+      const role: "renter" | "owner" = isOwner ? "owner" : "renter";
+      const newMsg: ChatMessage = {
+        id: newId("msg"),
+        bookingId,
+        senderId: DEMO_VIEWER.id,
+        senderName: DEMO_VIEWER.displayName,
+        senderRole: role,
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+
+      state.messages[bookingId] = state.messages[bookingId] ?? [];
+      state.messages[bookingId].push(newMsg);
+      save(state);
+      return newMsg;
     },
   };
 }
