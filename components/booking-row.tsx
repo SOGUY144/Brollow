@@ -26,10 +26,16 @@ export function BookingRow({
   booking,
   who,
   actions,
+  reputation,
+  footer,
 }: {
   booking: BookingWithItem;
   who: string;
   actions?: React.ReactNode;
+  /** The other person's reputation, shown under their name. */
+  reputation?: React.ReactNode;
+  /** Full-width area below the row, e.g. the rating form. */
+  footer?: React.ReactNode;
 }) {
   const [showProof, setShowProof] = useState(false);
 
@@ -78,6 +84,7 @@ export function BookingRow({
           <p className="text-muted-foreground">
             {who}: {booking.counterpart?.displayName ?? "Unknown"}
           </p>
+          {reputation}
           {booking.message && <p className="italic text-muted-foreground">“{booking.message}”</p>}
         </div>
         {actions && <div className="flex flex-wrap shrink-0 items-center gap-2">{actions}</div>}
@@ -106,6 +113,8 @@ export function BookingRow({
           </button>
         </div>
       )}
+
+      {footer && <div className="mt-3 border-t pt-3">{footer}</div>}
 
       <InspectionProofModal
         isOpen={showProof}

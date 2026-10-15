@@ -87,6 +87,40 @@ export interface Booking {
   updatedAt: string;
 }
 
+/** The role of the person being rated in that rental. */
+export type RatingRole = "owner" | "renter";
+
+export type OwnerRatingTag = "on_time" | "as_described" | "fair_charges" | "communicative";
+export type RenterRatingTag = "returned_on_time" | "good_care" | "communicative";
+export type RatingTag = OwnerRatingTag | RenterRatingTag;
+
+/** One person's rating of the other side of a finished rental. */
+export interface UserRating {
+  id: string;
+  bookingId: string;
+  raterId: string;
+  raterName: string;
+  rateeId: string;
+  role: RatingRole;
+  score: number;
+  tags: RatingTag[];
+  comment: string;
+  createdAt: string;
+  isDemo: boolean;
+}
+
+export interface RoleReputation {
+  average: number | null;
+  count: number;
+  /** How many ratings ticked each tag. */
+  tagCounts: Partial<Record<RatingTag, number>>;
+}
+
+export interface Reputation {
+  asOwner: RoleReputation;
+  asRenter: RoleReputation;
+}
+
 /** A confirmed reservation range; carries no renter details. */
 export interface BlockedRange {
   itemId: string;

@@ -2,6 +2,7 @@ import type { BlockedRange, CategorySlug, ItemSummary } from "../types";
 import { categoryName, isCategory } from "../categories";
 import { checkAvailability } from "./availability";
 import { isIsoDate } from "./dates";
+import { parseQuery } from "./search-terms";
 
 export type SortKey = "relevance" | "price_asc" | "price_desc" | "rating";
 
@@ -68,26 +69,23 @@ export function filtersToParams(filters: SearchFilters): URLSearchParams {
   return p;
 }
 
-function terms(text: string): string[] {
-  return text.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 1);
-}
-
-function relevance(item: ItemSummary, words: string[]): number {
-  if (words.length === 0) return 0;
+function relevance(item: ItemSummary, groups: string[][]): number {
+  if (groups.length === 0) return 0;
   const title = item.title.toLowerCase();
   const body = `${item.description} ${categoryName(item.category)}`.toLowerCase();
   let score = 0;
-  for (const w of words) {
-    if (title.includes(w)) score += 3;
-    else if (body.includes(w)) score += 1;
-    else return -1; // every keyword must match somewhere
+  for (const group of groups) {
+    // Each group is one thing the person asked for; any of its words may match.
+    if (group.some((w) => title.includes(w))) score += 3;
+    else if (group.some((w) => body.includes(w))) score += 1;
+    else return -1; // everything asked for must match somewhere
   }
   return score;
 }
 
 /** Applies every filter together (AND), then sorts. */
 export function searchItems(items: ItemSummary[], filters: SearchFilters, blocked: BlockedRange[]): ItemSummary[] {
-  const words = terms(filters.q);
+  const words = parseQuery(filters.q);
   const location = filters.location.trim().toLowerCase();
   const scored: { item: ItemSummary; score: number }[] = [];
 

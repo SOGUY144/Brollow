@@ -5,22 +5,24 @@ import { transitionError } from "../domain/bookings";
 import { rangesOverlap, todayInAppTz, validateRentalDates } from "../domain/dates";
 import type { ValidListing } from "../domain/listing";
 import { quoteRental } from "../domain/pricing";
-import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, Profile, Wallet, WalletTransaction } from "../types";
+import { ratingEligibility, validateRating } from "../domain/ratings";
+import type { BlockedRange, Booking, BookingStatus, Item, ItemStatus, Profile, UserRating, Wallet, WalletTransaction } from "../types";
 import { DataError, summarise, type BookingWithItem, type DataApi, type Viewer } from "./api";
 import { compressImage } from "./images";
-import { DEMO_USER_ID, SEED_PROFILES, seedBookings, seedItems, seedReviews } from "./seed";
+import { DEMO_USER_ID, SEED_PROFILES, seedBookings, seedItems, seedRatings, seedReviews } from "./seed";
 
 /**
  * Demo mode: no real authentication. Everything the demo user changes is
  * kept in this browser's localStorage and can be reset.
  */
-const KEY = "brollow-demo-v3"; // v3: wallet support
+const KEY = "brollow-demo-v4";
 
 interface DemoState {
   createdItems: Item[];
   itemEdits: Record<string, Partial<Item>>;
   bookings: Booking[];
   favorites: string[];
+  ratings: UserRating[];
   walletBalanceSatang: number;
   walletTransactions: WalletTransaction[];
 }
@@ -31,6 +33,7 @@ function freshState(): DemoState {
     itemEdits: {},
     bookings: seedBookings(todayInAppTz()),
     favorites: ["cam-03", "spo-02"],
+    ratings: seedRatings(),
     walletBalanceSatang: 2500_00,
     walletTransactions: [
       {
@@ -269,6 +272,38 @@ export function createDemoApi(): DataApi {
     },
     async signOut() {
       throw new DataError("The demo account can't sign out. Reset the demo data instead.");
+    },
+
+    async listRatings({ rateeIds, bookingIds }) {
+      return load().ratings.filter(
+        (r) => (!rateeIds || rateeIds.includes(r.rateeId)) && (!bookingIds || bookingIds.includes(r.bookingId)),
+      );
+    },
+
+    async submitRating({ bookingId, score, tags, comment }) {
+      const state = load();
+      const booking = state.bookings.find((b) => b.id === bookingId);
+      if (!booking) throw new DataError("Booking not found.");
+      const eligibility = ratingEligibility(booking, DEMO_USER_ID, todayInAppTz(), state.ratings);
+      if (!eligibility.canRate) throw new DataError(eligibility.reason);
+      const problem = validateRating(eligibility.role, score, tags, comment.trim());
+      if (problem) throw new DataError(problem);
+      const rating: UserRating = {
+        id: newId("rt"),
+        bookingId,
+        raterId: DEMO_USER_ID,
+        raterName: DEMO_VIEWER.displayName,
+        rateeId: eligibility.rateeId,
+        role: eligibility.role,
+        score,
+        tags,
+        comment: comment.trim(),
+        createdAt: new Date().toISOString(),
+        isDemo: true,
+      };
+      state.ratings.push(rating);
+      save(state);
+      return rating;
     },
 
     async resetDemo() {

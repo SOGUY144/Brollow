@@ -3,7 +3,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { photoError } from "../domain/listing";
-import type { BlockedRange, Booking, CategorySlug, Item, ItemCondition, Profile, Review, Wallet, WalletTransaction } from "../types";
+import type { BlockedRange, Booking, CategorySlug, Item, ItemCondition, Profile, RatingRole, RatingTag, Review, UserRating, Wallet, WalletTransaction } from "../types";
 import { DataError, summarise, type BookingWithItem, type DataApi } from "./api";
 
 /* Row shapes as stored in Postgres (see supabase/migrations). */
@@ -16,6 +16,10 @@ interface ItemRow {
 }
 interface ProfileRow { id: string; display_name: string; area: string; bio: string; member_since: string; is_demo: boolean }
 interface ReviewRow { id: string; item_id: string; author_name: string; rating: number; comment: string; created_at: string; is_demo: boolean }
+interface RatingRow {
+  id: string; booking_id: string; rater_id: string; ratee_id: string; role: RatingRole; score: number;
+  tags: RatingTag[]; comment: string; created_at: string; is_demo: boolean;
+}
 interface BookingRow {
   id: string; item_id: string; renter_id: string; owner_id: string; start_date: string; end_date: string;
   days: number; daily_price_satang: number; total_satang: number; status: Booking["status"]; message: string;
@@ -41,6 +45,10 @@ const toProfile = (r: ProfileRow): Profile => ({
 });
 const toReview = (r: ReviewRow): Review => ({
   id: r.id, itemId: r.item_id, authorName: r.author_name, rating: r.rating, comment: r.comment, createdAt: r.created_at, isDemo: r.is_demo,
+});
+const toRating = (r: RatingRow, raterName: string | undefined): UserRating => ({
+  id: r.id, bookingId: r.booking_id, raterId: r.rater_id, raterName: raterName ?? "Someone", rateeId: r.ratee_id,
+  role: r.role, score: r.score, tags: r.tags, comment: r.comment, createdAt: r.created_at, isDemo: r.is_demo,
 });
 const toBooking = (r: BookingRow): Booking => ({
   id: r.id, itemId: r.item_id, renterId: r.renter_id, ownerId: r.owner_id, startDate: r.start_date, endDate: r.end_date,
@@ -210,6 +218,26 @@ export function createLiveApi(url: string, key: string): DataApi {
         p_pickup_note: details?.pickupNote ?? null,
       });
       if (error) fail(error, "Couldn't update the booking.");
+    },
+
+    async listRatings({ rateeIds, bookingIds }) {
+      if (rateeIds?.length === 0 || bookingIds?.length === 0) return [];
+      let query = sb.from("user_ratings").select("*").order("created_at", { ascending: false });
+      if (rateeIds) query = query.in("ratee_id", rateeIds);
+      if (bookingIds) query = query.in("booking_id", bookingIds);
+      const { data, error } = await query;
+      if (error) fail(error, "Couldn't load ratings.");
+      const rows = data as RatingRow[];
+      const raters = await profilesById(rows.map((r) => r.rater_id));
+      return rows.map((r) => toRating(r, raters.get(r.rater_id)?.displayName));
+    },
+
+    async submitRating({ bookingId, score, tags, comment }) {
+      const { data, error } = await sb.rpc("submit_rating", { p_booking_id: bookingId, p_score: score, p_tags: tags, p_comment: comment });
+      if (error) fail(error, "Couldn't save your rating.");
+      const row = data as RatingRow;
+      const me = await profilesById([row.rater_id]);
+      return toRating(row, me.get(row.rater_id)?.displayName);
     },
 
     async listMyListings() {

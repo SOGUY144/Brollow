@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand";
 import { CATEGORIES } from "@/lib/categories";
+import { RENT_TOPICS } from "@/lib/rent-topics";
 
 export function SiteFooter() {
   return (
     <footer className="mt-16 border-t bg-secondary/60">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-5">
         <div className="space-y-2">
           <p className="flex items-center gap-1.5 font-semibold text-primary">
             <BrandMark className="size-6" /> <span className="text-foreground">Brollow</span>
@@ -13,6 +14,7 @@ export function SiteFooter() {
           <p className="text-sm text-muted-foreground">Borrow instead of buying. A prototype marketplace for renting things from people nearby.</p>
         </div>
         <FooterList title="Categories" links={CATEGORIES.map((c) => ({ href: `/search?category=${c.slug}`, label: c.name }))} />
+        <FooterList title="Popular rentals" links={RENT_TOPICS.slice(0, 7).map((t) => ({ href: `/rent/${t.slug}`, label: `Rent ${t.name.toLowerCase()}` }))} />
         <FooterList
           title="Renting"
           links={[

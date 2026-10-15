@@ -7,13 +7,16 @@ import { ModeIndicator } from "@/components/mode-indicator";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Toaster } from "@/components/ui/sonner";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Brollow — Borrow instead of buying", template: "%s · Brollow" },
-  description: "Find what you need, near you, whenever you need it. Rent cameras, tools, camping and party gear from people nearby.",
+  metadataBase: new URL(siteUrl()),
+  title: { default: "Brollow — Borrow instead of buying | เช่าของใกล้คุณ", template: "%s · Brollow" },
+  description: "Find what you need, near you, whenever you need it. Rent cameras, tools, camping and party gear from people nearby. เช่ากล้อง เต็นท์ เครื่องมือ และอุปกรณ์ปาร์ตี้รายวัน",
+  openGraph: { siteName: "Brollow", type: "website" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -9,6 +9,8 @@ import { PickupLocation } from "@/components/pickup-location";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ItemCard } from "@/components/item-card";
 import { ItemImage } from "@/components/item-image";
+import { RatingList, ReputationLine } from "@/components/reputation";
+import { reputationOf } from "@/lib/domain/ratings";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
 import { categoryName, conditionLabel } from "@/lib/categories";
@@ -25,13 +27,16 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
     const related = found
       ? all.filter((i) => i.id !== id && i.status === "active" && i.category === found.item.category).slice(0, 4)
       : [];
-    return { found, blocked, related };
+    // The owner's public ratings from past renters.
+    const ownerRatings = found ? await api.listRatings({ rateeIds: [found.item.ownerId] }) : [];
+    return { found, blocked, related, ownerRatings };
   }, [api, id]);
   const [photo, setPhoto] = useState(0);
   const title = detail.status === "ready" && detail.data.found ? detail.data.found.item.title : null;
   useEffect(() => {
-    // Item data loads in the browser (demo data lives there), so set the tab title here.
-    if (title) document.title = `${title} · Brollow`;
+    // Public listings get a full title from the server. Listings that exist only in
+    // this browser (demo mode) get the generic one, so fill in the name here.
+    if (title && document.title.startsWith("Item for rent")) document.title = `${title} · Brollow`;
   }, [title]);
 
   if (detail.status === "loading") {
@@ -50,7 +55,7 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
       </div>
     );
   }
-  const { found, blocked, related } = detail.data;
+  const { found, blocked, related, ownerRatings } = detail.data;
   if (!found) {
     return (
       <div className="mx-auto max-w-xl px-4 py-16 text-center">
@@ -122,7 +127,7 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
           )}
 
           {item.owner && (
-            <section className="flex items-start gap-3 rounded-xl border bg-card p-4">
+            <section className="flex items-start gap-3 rounded-xl border bg-card p-4" aria-label="About the owner">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-soft font-semibold text-primary" aria-hidden="true">
                 {item.owner.displayName.slice(0, 1)}
               </div>
@@ -132,7 +137,14 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
                   {item.owner.isDemo && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">Demo profile</span>}
                 </p>
                 <p className="text-muted-foreground">{item.owner.area} · Member since {formatDate(item.owner.memberSince, { month: "long", year: "numeric" })}</p>
+                <ReputationLine rep={reputationOf(item.ownerId, ownerRatings).asOwner} role="owner" className="mt-1" />
                 {item.owner.bio && <p className="mt-1">{item.owner.bio}</p>}
+                {ownerRatings.some((r) => r.role === "owner") && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What renters say about {item.owner.displayName}</p>
+                    <RatingList ratings={ownerRatings} role="owner" />
+                  </div>
+                )}
               </div>
             </section>
           )}
