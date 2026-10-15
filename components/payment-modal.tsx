@@ -205,10 +205,10 @@ export function PaymentModal({ booking, isOpen, onClose, onConfirm }: PaymentMod
         </div>
 
         {/* Protection Note */}
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-800 p-3 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
-          <Lock className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
-          <p>
-            <strong>Escrow Protection:</strong> Your payment of {formatMoney(booking.totalSatang)} is safely held by Brollow. The owner receives payout only after you physically inspect the item at handover.
+        <div className="mt-4 rounded-xl border border-primary/25 bg-brand-soft/50 p-3.5 text-xs text-foreground flex items-start gap-2.5 shadow-2xs">
+          <Lock className="size-4 shrink-0 text-primary mt-0.5" />
+          <p className="leading-relaxed">
+            <strong className="font-semibold text-primary">Escrow Protection:</strong> Your payment of {formatMoney(booking.totalSatang)} is safely held by Brollow. The owner receives payout only after you physically inspect the item at handover.
           </p>
         </div>
 

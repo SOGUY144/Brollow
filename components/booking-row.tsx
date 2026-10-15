@@ -91,10 +91,10 @@ export function BookingRow({
       </div>
 
       {booking.status === "escrow_held" && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/70 dark:bg-amber-950/20 dark:border-amber-800 p-2.5 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2">
-          <Lock className="size-4 shrink-0 text-amber-700 dark:text-amber-400" />
-          <span>
-            <strong>Brollow Escrow Protection:</strong> Rental funds ({formatMoney(booking.totalSatang)}) are held securely in escrow. Funds will be released to the owner upon handover inspection confirmation.
+        <div className="rounded-lg border border-amber-300 bg-amber-50/80 p-2.5 text-xs text-foreground flex items-center gap-2">
+          <Lock className="size-4 shrink-0 text-amber-700" />
+          <span className="leading-relaxed">
+            <strong className="font-semibold text-amber-900">Brollow Escrow Protection:</strong> Rental funds ({formatMoney(booking.totalSatang)}) are held securely in escrow. Funds will be released to the owner upon handover inspection confirmation.
           </span>
         </div>
       )}

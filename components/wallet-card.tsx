@@ -168,7 +168,7 @@ export function WalletCard({ showRecentTransactions = true }: { showRecentTransa
                       <div
                         className={`size-7 rounded-full flex items-center justify-center shrink-0 ${
                           isCredit
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                            ? "bg-emerald-100 text-emerald-800"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >
@@ -188,7 +188,7 @@ export function WalletCard({ showRecentTransactions = true }: { showRecentTransa
                     </div>
                     <span
                       className={`font-semibold shrink-0 text-sm ${
-                        isCredit ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                        isCredit ? "text-emerald-700" : "text-foreground"
                       }`}
                     >
                       {isCredit ? "+" : ""}
