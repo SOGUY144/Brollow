@@ -6,12 +6,14 @@ import { Suspense } from "react";
 import { CategoryIcon } from "@/components/category-icon";
 import { HeroSearch } from "@/components/hero-search";
 import { HomeListings } from "@/components/home-listings";
+import { BrollowPromise } from "@/components/brollow-promise";
 import { CATEGORIES } from "@/lib/categories";
 import { requestToday } from "@/lib/server-today";
 
 async function DatedHeroSearch() {
   return <HeroSearch today={await requestToday()} />;
 }
+
 
 const STEPS = [
   { icon: Search, title: "Find it nearby", text: "Search by item, area and dates. Only items free on your dates are shown when you pick dates." },
@@ -76,6 +78,7 @@ export default function HomePage() {
         </p>
       </section>
 
+      <BrollowPromise />
 
     </div>
   );
