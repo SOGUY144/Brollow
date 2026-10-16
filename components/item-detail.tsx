@@ -9,8 +9,6 @@ import { PickupLocation } from "@/components/pickup-location";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ItemCard } from "@/components/item-card";
 import { ItemImage } from "@/components/item-image";
-import { RatingList, ReputationLine } from "@/components/reputation";
-import { reputationOf } from "@/lib/domain/ratings";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
 import { categoryName, conditionLabel } from "@/lib/categories";
@@ -128,30 +126,7 @@ export function ItemDetailView({ id, today }: { id: string; today: string }) {
             </section>
           )}
 
-          {item.owner && (
-            <section className="flex items-start gap-3 rounded-xl border bg-card p-4" aria-label="About the owner">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-soft font-semibold text-primary" aria-hidden="true">
-                {item.owner.displayName.slice(0, 1)}
-              </div>
-              <div className="text-sm">
-                <p className="font-medium">
-                  Lent by {item.owner.displayName}
-                  {item.owner.isDemo && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">Demo profile</span>}
-                </p>
-                <p className="text-muted-foreground">{item.owner.area} · Member since {formatDate(item.owner.memberSince, { month: "long", year: "numeric" })}</p>
-                <ReputationLine rep={reputationOf(item.ownerId, ownerRatings).asOwner} role="owner" className="mt-1" />
-                {item.owner.bio && <p className="mt-1">{item.owner.bio}</p>}
-                {ownerRatings.some((r) => r.role === "owner") && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What renters say about {item.owner.displayName}</p>
-                    <RatingList ratings={ownerRatings} role="owner" />
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          <PickupLocation item={item} />
+          <PickupLocation item={item} ownerRatings={ownerRatings} />
 
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Reviews</h2>
@@ -261,7 +236,7 @@ function BookingPanel({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm" noValidate>
+    <form id="booking-panel" onSubmit={submit} className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm" noValidate>
       <p>
         <span className="text-2xl font-semibold">{formatMoney(dailyPriceSatang)}</span>
         <span className="text-muted-foreground"> / day</span>
@@ -311,14 +286,14 @@ function BookingPanel({
         <>
           <label className="block space-y-1 text-sm">
             <span className="font-medium">Message to the owner <span className="font-normal text-muted-foreground">(optional)</span></span>
-            <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={3}
+            <textarea id="booking-message-input" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={3}
               placeholder="What will you use it for? When could you collect?" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
           </label>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="h-11 w-full" disabled={submitting || !viewerReady || !quote || !!dateError || !availability?.available}>
             {submitting ? "Sending request…" : "Request to rent"}
           </Button>
-          <p className="text-xs text-muted-foreground">You won&apos;t be charged. The owner confirms the request; payment isn&apos;t handled in this prototype.</p>
+          <p className="text-xs text-muted-foreground">You won&apos;t be charged yet. After the owner approves your request, you can fund Escrow safely from your Bookings page.</p>
         </>
       )}
     </form>

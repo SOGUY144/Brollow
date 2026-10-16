@@ -10,6 +10,7 @@ import { ItemImage } from "@/components/item-image";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES, CONDITIONS } from "@/lib/categories";
 import { MAX_PHOTOS, photoError, validateListing, type ListingErrors } from "@/lib/domain/listing";
+import { resolveItemCoordinates } from "@/lib/domain/location";
 import type { Item, ListingInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -85,9 +86,16 @@ export function ListingForm({ existing }: { existing?: Item }) {
     setStatus("saving");
     setFailure("");
     try {
+      const payload = {
+        ...result.value,
+        coordinates: resolveItemCoordinates(
+          result.value.location,
+          result.value.coordinates
+        ),
+      };
       const saved = existing
-        ? await api.updateListing(existing.id, result.value, keptImages, files.map((f) => f.file))
-        : await api.createListing(result.value, files.map((f) => f.file));
+        ? await api.updateListing(existing.id, payload, keptImages, files.map((f) => f.file))
+        : await api.createListing(payload, files.map((f) => f.file));
       toast.success(existing ? "Listing updated" : "Your listing is live");
       router.push(`/items/${saved.id}`);
     } catch (err) {
@@ -151,20 +159,13 @@ export function ListingForm({ existing }: { existing?: Item }) {
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Location</span>
           <input id="field-location" value={values.location} onChange={(e) => set("location", e.target.value)} maxLength={80}
-            placeholder="e.g. Hackney, London" className={cn(input, "h-11")} aria-invalid={Boolean(errors.location)} aria-describedby={describedBy("location")} />
+            placeholder="e.g. Sukhumvit, Bangkok" className={cn(input, "h-11")} aria-invalid={Boolean(errors.location)} aria-describedby={describedBy("location")} />
+          <span className="block text-xs text-muted-foreground">
+            An approximate neighborhood map &amp; radius zone will be generated automatically.
+          </span>
           {fieldError("location")}
         </label>
       </div>
-
-      <fieldset className="space-y-2 rounded-xl border p-4">
-        <legend className="px-1 text-sm font-medium">Pickup map (optional)</legend>
-        <p className="text-xs text-muted-foreground">Add a public pickup point to show a map and distance. These coordinates will be visible to renters. Leave both empty to show only your area.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1 text-sm"><span>Pickup latitude</span><input id="field-pickupLatitude" inputMode="decimal" value={values.pickupLatitude ?? ""} onChange={e => set("pickupLatitude", e.target.value)} className={cn(input, "h-11")} aria-invalid={!!errors.pickupLatitude} aria-describedby={describedBy("pickupLatitude")} /></label>
-          <label className="space-y-1 text-sm"><span>Pickup longitude</span><input inputMode="decimal" value={values.pickupLongitude ?? ""} onChange={e => set("pickupLongitude", e.target.value)} className={cn(input, "h-11")} /></label>
-        </div>
-        {fieldError("pickupLatitude")}
-      </fieldset>
 
       <fieldset className="space-y-1.5">
         <legend className="text-sm font-medium">Availability <span className="font-normal text-muted-foreground">(optional; leave empty for any time)</span></legend>

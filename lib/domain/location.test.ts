@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { distanceKm, validCoordinates } from "./location";
+import { distanceKm, resolveItemCoordinates, validCoordinates } from "./location";
 import { validateListing } from "./listing";
 
 describe("pickup distance", () => {
@@ -25,3 +25,27 @@ describe("pickup distance", () => {
     expect(cleared.ok && cleared.value.coordinates).toBeNull();
   });
 });
+
+describe("resolveItemCoordinates", () => {
+  it("returns explicit coordinates when valid and non-zero", () => {
+    const explicit = { latitude: 13.7307, longitude: 100.5696 };
+    expect(resolveItemCoordinates("Bangkok", explicit)).toEqual(explicit);
+  });
+
+  it("ignores (0, 0) Null Island coordinates and resolves from location text instead", () => {
+    const resolved = resolveItemCoordinates("Bangkok", { latitude: 0, longitude: 0 });
+    expect(resolved.latitude).toBeCloseTo(13.7563, 2);
+    expect(resolved.longitude).toBeCloseTo(100.5018, 2);
+  });
+
+  it("resolves Thai and UK neighborhood names to accurate coordinates", () => {
+    const sukhumvit = resolveItemCoordinates("Sukhumvit, Bangkok", null);
+    expect(sukhumvit.latitude).toBeCloseTo(13.7307, 2);
+    expect(sukhumvit.longitude).toBeCloseTo(100.5696, 2);
+
+    const hackney = resolveItemCoordinates("Hackney, London", null);
+    expect(hackney.latitude).toBeCloseTo(51.545, 2);
+    expect(hackney.longitude).toBeCloseTo(-0.0553, 2);
+  });
+});
+
