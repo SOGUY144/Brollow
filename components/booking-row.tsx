@@ -43,17 +43,28 @@ export function BookingRow({
     <li className="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-all hover:border-primary/20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="w-full shrink-0 sm:w-28">
-          <ItemImage
-            src={booking.item?.images[0]}
-            alt={booking.item?.title ?? "Removed item"}
-            category={booking.item?.category ?? "electronics"}
-            className="rounded-lg"
-          />
+          {booking.item ? (
+            <Link href={`/items/${booking.item.id}`} className="block overflow-hidden rounded-lg group">
+              <ItemImage
+                src={booking.item.images[0]}
+                alt={booking.item.title}
+                category={booking.item.category}
+                className="rounded-lg transition-transform duration-200 group-hover:scale-105"
+              />
+            </Link>
+          ) : (
+            <ItemImage
+              src={undefined}
+              alt="Removed item"
+              category="electronics"
+              className="rounded-lg"
+            />
+          )}
         </div>
         <div className="min-w-0 flex-1 space-y-1 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             {booking.item ? (
-              <Link href={`/items/${booking.item.id}`} className="font-medium hover:underline">
+              <Link href={`/items/${booking.item.id}`} className="font-medium hover:text-primary hover:underline transition-colors">
                 {booking.item.title}
               </Link>
             ) : (

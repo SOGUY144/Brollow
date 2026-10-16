@@ -53,16 +53,19 @@ function Listings() {
             return (
               <li key={item.id} className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center">
                 <div className="w-full shrink-0 sm:w-28">
-                  <ItemImage src={item.images[0]} alt={item.title} category={item.category} className="rounded-lg" />
+                  <Link href={`/items/${item.id}`} className="block overflow-hidden rounded-lg group">
+                    <ItemImage src={item.images[0]} alt={item.title} category={item.category} className="rounded-lg transition-transform duration-200 group-hover:scale-105" />
+                  </Link>
                 </div>
                 <div className="min-w-0 flex-1 text-sm">
                   <p className="flex flex-wrap items-center gap-2">
-                    <Link href={`/items/${item.id}`} className="font-medium hover:underline">{item.title}</Link>
+                    <Link href={`/items/${item.id}`} className="font-medium hover:text-primary hover:underline transition-colors">{item.title}</Link>
                     {paused && <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Paused</span>}
                   </p>
                   <p className="text-muted-foreground">{categoryName(item.category)} · {formatMoney(item.dailyPriceSatang)}/day · {item.location}</p>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex flex-wrap shrink-0 gap-2">
+                  <Link href={`/items/${item.id}`} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>View Listing</Link>
                   <Link href={`/account/listings/${item.id}/edit`} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>Edit</Link>
                   <Button variant="outline" className="h-9" disabled={busy === item.id} onClick={() => void toggle(item.id, paused)}>
                     {paused ? "Unpause" : "Pause"}

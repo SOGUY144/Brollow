@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, CheckCircle2, FileText, Lock, MessageCircle, RotateCcw } from "lucide-react";
+import { Camera, CheckCircle2, ExternalLink, FileText, Lock, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ import { BookingChatDrawer } from "@/components/booking-chat-drawer";
 import { HandoverModal } from "@/components/handover-modal";
 import { PaymentModal } from "@/components/payment-modal";
 import { RentalReceiptModal } from "@/components/rental-receipt-modal";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useLoad } from "@/components/use-catalog";
 import { allowedActions } from "@/lib/domain/bookings";
 import { todayInAppTz } from "@/lib/domain/dates";
@@ -22,6 +22,7 @@ import { ratingEligibility, reputationOf } from "@/lib/domain/ratings";
 import type { BookingWithItem } from "@/lib/data/api";
 import { formatMoney } from "@/lib/format";
 import type { BookingStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function BookingsPage() {
   return (
@@ -206,6 +207,20 @@ function Bookings() {
           </span>
         )}
 
+        {/* View Listing */}
+        {b.item && (
+          <Link
+            href={`/items/${b.item.id}`}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "border-muted-foreground/30 text-foreground hover:bg-muted flex items-center gap-1.5"
+            )}
+          >
+            <ExternalLink className="size-3.5 text-primary" />
+            <span>View Listing</span>
+          </Link>
+        )}
+
         {/* View Receipt */}
         {["escrow_held", "picked_up", "returned", "completed"].includes(b.status) && (
           <Button
@@ -336,6 +351,20 @@ function Bookings() {
           <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
             <CheckCircle2 className="size-3.5" /> Rental Completed
           </span>
+        )}
+
+        {/* View Listing */}
+        {b.item && (
+          <Link
+            href={`/items/${b.item.id}`}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "border-muted-foreground/30 text-foreground hover:bg-muted flex items-center gap-1.5"
+            )}
+          >
+            <ExternalLink className="size-3.5 text-primary" />
+            <span>View Listing</span>
+          </Link>
         )}
 
         {/* View Receipt */}
