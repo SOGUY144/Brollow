@@ -63,8 +63,10 @@ function Bookings() {
     setChatBooking(b);
   };
 
+  const viewerId = viewer?.id;
+
   useEffect(() => {
-    if (data.status !== "ready" || !viewer?.id) return;
+    if (data.status !== "ready" || !viewerId) return;
 
     const bookingsToCheck = [...data.data.mine, ...data.data.incoming].filter(
       (b) => b.status !== "cancelled" && b.status !== "declined"
@@ -72,6 +74,7 @@ function Bookings() {
     if (bookingsToCheck.length === 0) return;
 
     let isMounted = true;
+    const currentViewerId: string = viewerId;
 
     async function checkUnread() {
       try {
@@ -81,7 +84,7 @@ function Bookings() {
             try {
               const msgs = await api.listMessages(b.id);
               const lastRead = getBookingLastRead(b.id);
-              if (hasUnreadMessages(msgs, viewer!.id, lastRead)) {
+              if (hasUnreadMessages(msgs, currentViewerId, lastRead)) {
                 unread.add(b.id);
               }
             } catch {
@@ -106,7 +109,7 @@ function Bookings() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [api, data, viewer?.id]);
+  }, [api, data, viewerId]);
 
   async function act(id: string, to: BookingStatus, details?: { pickupPhotoUrl?: string; pickupNote?: string }) {
     if (to === "cancelled" && !window.confirm("Cancel this booking?")) return;

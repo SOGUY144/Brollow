@@ -49,6 +49,10 @@ export function BookingChatDrawer({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const onMarkReadRef = useRef(onMarkRead);
+  useEffect(() => {
+    onMarkReadRef.current = onMarkRead;
+  }, [onMarkRead]);
 
   const isViewerOwner = currentViewerId === booking.ownerId;
   const counterpartRole = isViewerOwner ? "Renter" : "Owner";
@@ -60,7 +64,7 @@ export function BookingChatDrawer({
 
     let isMounted = true;
     setBookingLastRead(booking.id);
-    onMarkRead?.(booking.id);
+    onMarkReadRef.current?.(booking.id);
 
     async function loadData(showSpinner = false) {
       if (showSpinner) {

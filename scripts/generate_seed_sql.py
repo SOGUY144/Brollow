@@ -76,7 +76,7 @@ for match in matches:
         f"values ('{owner_uuid}', '{title_escaped}', '{desc_escaped}', '{category}', {daily_price}, '{location_escaped}', '{condition}', {rules_pg}, {images_pg}, 'active');"
     )
 
-with open('seed-items.sql', 'w', encoding='utf-8') as f:
+with open('supabase/seed.sql', 'w', encoding='utf-8') as f:
     f.write("\n".join(sql_lines))
 
-print("Wrote seed-items.sql successfully!")
+print("Wrote supabase/seed.sql successfully!")

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowRight,
@@ -54,6 +54,8 @@ const QUICK_PROMPTS = [
   },
 ];
 
+const emptySubscribe = () => () => {};
+
 export function AiKitModal({
   isOpen,
   onClose,
@@ -61,8 +63,13 @@ export function AiKitModal({
   catalog,
 }: AiKitModalProps) {
   const { api } = useData();
-  const [mounted, setMounted] = useState(false);
-  const [activeCatalog, setActiveCatalog] = useState<ItemSummary[]>(catalog);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+  const [fetchedCatalog, setFetchedCatalog] = useState<ItemSummary[]>([]);
+  const activeCatalog = catalog && catalog.length > 0 ? catalog : fetchedCatalog;
   const [prompt, setPrompt] = useState(initialPrompt);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<SmartKitResult | null>(null);
@@ -76,11 +83,7 @@ export function AiKitModal({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const stopAudioPlayback = () => {
+  const stopAudioPlayback = useCallback(() => {
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
       audioPlayerRef.current.currentTime = 0;
@@ -91,70 +94,78 @@ export function AiKitModal({
     }
     setIsSpeaking(false);
     setIsLoadingAudio(false);
-  };
+  }, []);
 
-  // Stop audio and recording when modal closes
+  // Stop audio and recording when modal unmounts or closes
   useEffect(() => {
-    if (!isOpen) {
-      stopAudioPlayback();
+    if (!isOpen) return;
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.currentTime = 0;
+        audioPlayerRef.current = null;
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
       }
-      setIsRecording(false);
-    }
+    };
   }, [isOpen]);
 
-  // Sync catalog prop or fetch if empty
+  // Fetch catalog if prop is empty
   useEffect(() => {
-    if (catalog && catalog.length > 0) {
-      setActiveCatalog(catalog);
-    } else {
+    if (!catalog || catalog.length === 0) {
       void api
         .listItems()
         .then((items) => {
           if (items && items.length > 0) {
-            setActiveCatalog(items);
+            setFetchedCatalog(items);
           }
         })
         .catch(() => {});
     }
   }, [catalog, api]);
 
-  const runKitGeneration = async (queryText: string) => {
-    stopAudioPlayback();
-    const textToRun = queryText.trim() || "Solo outdoor vlog / YouTube video, budget ฿2,800";
-    setIsAnalyzing(true);
+  const runKitGeneration = useCallback(
+    async (queryText: string) => {
+      stopAudioPlayback();
+      const textToRun = queryText.trim() || "Solo outdoor vlog / YouTube video, budget ฿2,800";
+      setIsAnalyzing(true);
 
-    let itemsToUse = activeCatalog;
-    if (!itemsToUse || itemsToUse.length === 0) {
+      let itemsToUse = activeCatalog;
+      if (!itemsToUse || itemsToUse.length === 0) {
+        try {
+          itemsToUse = await api.listItems();
+          setFetchedCatalog(itemsToUse);
+        } catch {
+          itemsToUse = [];
+        }
+      }
+
       try {
-        itemsToUse = await api.listItems();
-        setActiveCatalog(itemsToUse);
+        const res = await fetch("/api/ai-kit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: textToRun, items: itemsToUse }),
+        });
+        if (res.ok) {
+          const kit = (await res.json()) as SmartKitResult;
+          setResult(kit);
+          setIsAnalyzing(false);
+          return;
+        }
       } catch {
-        itemsToUse = [];
+        // Fallback to local engine below
       }
-    }
 
-    try {
-      const res = await fetch("/api/ai-kit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: textToRun, items: itemsToUse }),
-      });
-      if (res.ok) {
-        const kit = (await res.json()) as SmartKitResult;
-        setResult(kit);
-        setIsAnalyzing(false);
-        return;
-      }
-    } catch {
-      // Fallback to local engine below
-    }
-
-    const kit = generateSmartKit(textToRun, itemsToUse);
-    setResult(kit);
-    setIsAnalyzing(false);
-  };
+      const kit = generateSmartKit(textToRun, itemsToUse);
+      setResult(kit);
+      setIsAnalyzing(false);
+    },
+    [activeCatalog, api, stopAudioPlayback]
+  );
 
   const handleToggleRecording = async () => {
     if (isRecording) {
@@ -284,25 +295,27 @@ export function AiKitModal({
     const trimmed = initialPrompt.trim();
     const defaultQuery = "Solo outdoor vlog / YouTube video, budget ฿2,800";
     const queryToRun = trimmed || defaultQuery;
-    setPrompt(queryToRun);
 
-    if (trimmed) {
-      void runKitGeneration(queryToRun);
-    } else {
-      void (async () => {
+    void (async () => {
+      await Promise.resolve();
+      setPrompt(queryToRun);
+
+      if (trimmed) {
+        await runKitGeneration(queryToRun);
+      } else {
         let itemsToUse = activeCatalog;
         if (!itemsToUse || itemsToUse.length === 0) {
           try {
             itemsToUse = await api.listItems();
-            setActiveCatalog(itemsToUse);
+            setFetchedCatalog(itemsToUse);
           } catch {
             itemsToUse = [];
           }
         }
         setResult(generateSmartKit(queryToRun, itemsToUse));
-      })();
-    }
-  }, [isOpen, initialPrompt]);
+      }
+    })();
+  }, [isOpen, initialPrompt, activeCatalog, api, runKitGeneration]);
 
   // Handle ESC key
   useEffect(() => {
