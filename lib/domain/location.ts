@@ -55,28 +55,50 @@ const KNOWN_AREA_COORDINATES: Array<{ keywords: string[]; coords: Coordinates }>
 
 /**
  * Resolves coordinates for an item's pickup area.
- * Uses explicit coordinates when valid and non-zero (ignores 0,0 Null Island),
- * otherwise matches the location text against known Thai/UK neighborhoods,
- * defaulting to central Bangkok so every listing renders a neighborhood map.
+ * Matches the location text against known Thai/UK neighborhoods first;
+ * only uses explicit coordinates if they are valid, non-zero, and geographically
+ * plausible (within 80 km of the named city, or within Thailand / UK bounds).
  */
 export function resolveItemCoordinates(
   locationText: string,
   explicit?: Coordinates | null
 ): Coordinates {
+  const normalized = (locationText || "").trim().toLowerCase();
+  let matchedCoords: Coordinates | null = null;
+
+  for (const entry of KNOWN_AREA_COORDINATES) {
+    if (entry.keywords.some((kw) => normalized.includes(kw))) {
+      matchedCoords = entry.coords;
+      break;
+    }
+  }
+
   if (
     validCoordinates(explicit) &&
     !(Math.abs(explicit.latitude) < 0.001 && Math.abs(explicit.longitude) < 0.001)
   ) {
-    return explicit;
-  }
-
-  const normalized = (locationText || "").trim().toLowerCase();
-  for (const entry of KNOWN_AREA_COORDINATES) {
-    if (entry.keywords.some((kw) => normalized.includes(kw))) {
-      return entry.coords;
+    if (matchedCoords) {
+      const distFromNamedArea = distanceKm(explicit, matchedCoords);
+      if (distFromNamedArea !== null && distFromNamedArea <= 80) {
+        return explicit;
+      }
+    } else {
+      const inThailand =
+        explicit.latitude >= 5.5 &&
+        explicit.latitude <= 20.5 &&
+        explicit.longitude >= 97.3 &&
+        explicit.longitude <= 105.7;
+      const inUk =
+        explicit.latitude >= 49.8 &&
+        explicit.latitude <= 59.0 &&
+        explicit.longitude >= -8.2 &&
+        explicit.longitude <= 1.8;
+      if (inThailand || inUk) {
+        return explicit;
+      }
     }
   }
 
-  return { latitude: 13.7563, longitude: 100.5018 };
+  return matchedCoords ?? { latitude: 13.7563, longitude: 100.5018 };
 }
 

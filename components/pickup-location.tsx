@@ -15,10 +15,9 @@ import {
 import { useLocation } from "@/components/location-context";
 import { RatingList, ReputationLine } from "@/components/reputation";
 import {
-   type Coordinates,
+  type Coordinates,
   distanceKm,
   resolveItemCoordinates,
-  validCoordinates,
 } from "@/lib/domain/location";
 import { reputationOf } from "@/lib/domain/ratings";
 import { formatDate } from "@/lib/format";
@@ -39,16 +38,15 @@ export function PickupLocation({
     coords: Coordinates;
   } | null>(null);
 
-  const hasExplicitValidCoords =
-    validCoordinates(item.coordinates) &&
-    !(
-      Math.abs(item.coordinates.latitude) < 0.001 &&
-      Math.abs(item.coordinates.longitude) < 0.001
-    );
+  // Check if staticCoords came from the default fallback because the location string is custom
+  const isCustomLocation =
+    staticCoords.latitude === 13.7563 &&
+    staticCoords.longitude === 100.5018 &&
+    !item.location.toLowerCase().includes("bangkok") &&
+    !item.location.includes("กรุงเทพ");
 
-  // If no explicit coords, also try live Nominatim geocoding for custom place names
   useEffect(() => {
-    if (hasExplicitValidCoords) return;
+    if (!isCustomLocation) return;
     const query = item.location.trim();
     if (!query) return;
 
@@ -84,21 +82,21 @@ export function PickupLocation({
       active = false;
       controller.abort();
     };
-  }, [item.location, hasExplicitValidCoords]);
+  }, [item.location, isCustomLocation]);
 
   const point =
-    !hasExplicitValidCoords && geocoded?.query === item.location.trim()
+    isCustomLocation && geocoded?.query === item.location.trim()
       ? geocoded.coords
       : staticCoords;
 
   const distance = distanceKm(origin, point);
 
-  // Zoomed neighborhood bounding box without default marker pin
+  // Neighborhood street-level bounding box (minLon, minLat, maxLon, maxLat)
   const bbox = [
-    Math.max(-180, point.longitude - 0.022),
-    Math.max(-90, point.latitude - 0.015),
-    Math.min(180, point.longitude + 0.022),
-    Math.min(90, point.latitude + 0.015),
+    Math.max(-180, point.longitude - 0.018),
+    Math.max(-90, point.latitude - 0.012),
+    Math.min(180, point.longitude + 0.018),
+    Math.min(90, point.latitude + 0.012),
   ].join(",");
 
   const ownerName = item.owner?.displayName ?? "Verified Owner";
@@ -125,28 +123,27 @@ export function PickupLocation({
   };
 
   return (
-    <section
-      aria-label="Owner and pickup location"
-      className="space-y-3"
-    >
-      <div className="grid overflow-hidden rounded-2xl border border-zinc-800 bg-[#18191e] text-white shadow-xl md:grid-cols-[1.1fr_1fr]">
-        {/* Left Column: Hygglo-style Owner & Trust Info */}
+    <section aria-label="Owner and pickup location" className="space-y-3">
+      <div className="grid overflow-hidden rounded-2xl border border-[#d6e2c4] bg-gradient-to-br from-[#ffffff] via-[#f8fbf3] to-[#f1f6e8] text-[#17281f] shadow-sm md:grid-cols-[1.1fr_1fr]">
+        {/* Left Column: Brollow Forest & Sage Owner Card */}
         <div className="flex flex-col justify-between p-6 sm:p-7">
           <div>
             {/* Owner Header */}
             <div className="flex items-center gap-4">
               <div
-                className="flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 text-xl font-bold text-white shadow-md ring-2 ring-white/15"
+                className="flex size-14 shrink-0 items-center justify-center rounded-full bg-[#124e3b] text-xl font-bold text-[#e3edc8] shadow-xs ring-4 ring-[#e3edc8]/70"
                 aria-hidden="true"
               >
                 {ownerName.slice(0, 1).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <h2 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                <h2 className="truncate text-xl font-bold tracking-tight text-[#17281f] sm:text-2xl">
                   Owned by{" "}
-                  <span className="text-[#a855f7]">{ownerName}</span>
+                  <span className="text-[#124e3b] underline decoration-[#c5db9b] decoration-2 underline-offset-4">
+                    {ownerName}
+                  </span>
                 </h2>
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1.5 flex items-center gap-2">
                   <span
                     className="flex items-center gap-1"
                     aria-label={`Rated ${displayScore.toFixed(1)} out of 5`}
@@ -157,20 +154,20 @@ export function PickupLocation({
                         className={cn(
                           "size-4",
                           i < filledHearts
-                            ? "fill-rose-500 text-rose-500"
-                            : "fill-zinc-700 text-zinc-700"
+                            ? "fill-[#166534] text-[#166534]"
+                            : "fill-[#dce6cf] text-[#dce6cf]"
                         )}
                         aria-hidden="true"
                       />
                     ))}
                   </span>
-                  <span className="text-sm font-medium text-zinc-400">
+                  <span className="text-sm font-semibold text-[#475d50]">
                     {Number.isInteger(displayScore)
                       ? `${displayScore}/5`
                       : `${displayScore.toFixed(1)}/5`}
                   </span>
                   {item.owner?.isDemo && (
-                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-medium text-amber-300">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
                       Demo profile
                     </span>
                   )}
@@ -179,16 +176,18 @@ export function PickupLocation({
             </div>
 
             {/* 5 Trust & Location Checklist Rows */}
-            <ul className="mt-6 space-y-3.5 text-[15px] text-zinc-100">
+            <ul className="mt-6 space-y-3.5 text-[15px] text-[#22352b]">
               <li className="flex items-center gap-3">
                 <CheckCircle2
-                  className="size-5 shrink-0 text-emerald-400"
+                  className="size-5 shrink-0 text-[#15803d]"
                   aria-hidden="true"
                 />
                 <span>
-                  Identified
+                  <strong className="font-medium text-[#17281f]">
+                    Identified
+                  </strong>
                   {item.owner?.memberSince && (
-                    <span className="text-zinc-400">
+                    <span className="text-[#566c5f]">
                       {" "}
                       · Member since{" "}
                       {formatDate(item.owner.memberSince, {
@@ -202,7 +201,7 @@ export function PickupLocation({
 
               <li className="flex items-center gap-3">
                 <Clock
-                  className="size-5 shrink-0 text-zinc-300"
+                  className="size-5 shrink-0 text-[#124e3b]"
                   aria-hidden="true"
                 />
                 <span>Usually responds within a few hours</span>
@@ -210,7 +209,7 @@ export function PickupLocation({
 
               <li className="flex items-center gap-3">
                 <MessageCircle
-                  className="size-5 shrink-0 text-zinc-300"
+                  className="size-5 shrink-0 text-[#124e3b]"
                   aria-hidden="true"
                 />
                 <span>98% response rate</span>
@@ -219,14 +218,16 @@ export function PickupLocation({
               <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <div className="flex items-center gap-3">
                   <Map
-                    className="size-5 shrink-0 text-zinc-300"
+                    className="size-5 shrink-0 text-[#124e3b]"
                     aria-hidden="true"
                   />
                   <span>
-                    {item.location}{" "}
+                    <strong className="font-medium text-[#17281f]">
+                      {item.location}
+                    </strong>{" "}
                     {distance !== null && (
-                      <strong className="font-bold text-white">
-                        {distance.toFixed(1)} km
+                      <strong className="font-bold text-[#124e3b]">
+                        · {distance.toFixed(1)} km
                       </strong>
                     )}
                   </span>
@@ -236,7 +237,7 @@ export function PickupLocation({
                     type="button"
                     onClick={locate}
                     disabled={busy}
-                    className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-zinc-200 transition hover:bg-white/20 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-full border border-[#c7d9b0] bg-[#e3edc8]/60 px-2.5 py-0.5 text-xs font-medium text-[#124e3b] transition hover:bg-[#d8e8b5] disabled:opacity-50"
                   >
                     <LocateFixed className="size-3" aria-hidden="true" />
                     {busy ? "Locating…" : "Show distance"}
@@ -246,14 +247,14 @@ export function PickupLocation({
 
               <li className="flex items-start gap-3">
                 <LifeBuoy
-                  className="mt-0.5 size-5 shrink-0 text-zinc-300"
+                  className="mt-0.5 size-5 shrink-0 text-[#124e3b]"
                   aria-hidden="true"
                 />
                 <span>
                   Protected by Brollow Escrow without excess.{" "}
                   <Link
                     href={`/search?location=${encodeURIComponent(item.location)}`}
-                    className="font-medium text-[#a855f7] underline underline-offset-2 hover:text-[#c084fc]"
+                    className="font-semibold text-[#124e3b] underline decoration-[#124e3b]/40 underline-offset-2 hover:decoration-[#124e3b]"
                   >
                     Browse area
                   </Link>
@@ -262,7 +263,7 @@ export function PickupLocation({
             </ul>
 
             {item.owner?.bio && (
-              <p className="mt-4 border-t border-white/10 pt-3 text-xs leading-relaxed text-zinc-400">
+              <p className="mt-4 border-t border-[#dce6cf] pt-3 text-xs leading-relaxed text-[#52685b]">
                 “{item.owner.bio}”
               </p>
             )}
@@ -273,15 +274,15 @@ export function PickupLocation({
             <button
               type="button"
               onClick={handleMessageClick}
-              className="w-full rounded-full border border-[#a855f7]/60 bg-transparent px-5 py-2.5 text-sm font-semibold text-[#c084fc] transition hover:border-[#a855f7] hover:bg-[#a855f7]/15"
+              className="w-full rounded-full border-2 border-[#124e3b] bg-white px-5 py-2.5 text-sm font-semibold text-[#124e3b] shadow-2xs transition hover:bg-[#124e3b] hover:text-white"
             >
               Send message
             </button>
           </div>
         </div>
 
-        {/* Right Column: Full-Bleed Map with Shaded Radius Circle */}
-        <div className="relative min-h-[280px] w-full overflow-hidden bg-[#e5e9ec] md:min-h-full">
+        {/* Right Column: Full-Bleed Map with Brollow Emerald Radius Circle */}
+        <div className="relative min-h-[280px] w-full overflow-hidden border-t border-[#d6e2c4] bg-[#e5ece0] md:min-h-full md:border-t-0 md:border-l">
           <iframe
             title={`Pickup map: ${item.location}`}
             loading="lazy"
@@ -292,13 +293,13 @@ export function PickupLocation({
             )}&layer=mapnik`}
           />
 
-          {/* Translucent Approximate Pickup Radius Circle (Hygglo style) */}
+          {/* Translucent Approximate Pickup Radius Circle (Brollow Emerald/Sage style) */}
           <div
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
             aria-hidden="true"
           >
-            <div className="flex size-44 items-center justify-center rounded-full border-2 border-[#9333ea]/45 bg-[#9333ea]/22 shadow-inner sm:size-52">
-              <div className="size-3 rounded-full bg-[#7e22ce] ring-4 ring-white/80" />
+            <div className="flex size-44 items-center justify-center rounded-full border-2 border-[#124e3b]/55 bg-[#124e3b]/18 shadow-inner sm:size-52">
+              <div className="size-3.5 rounded-full bg-[#124e3b] ring-4 ring-white/90" />
             </div>
           </div>
 
@@ -307,7 +308,7 @@ export function PickupLocation({
             href={`https://www.openstreetmap.org/?mlat=${point.latitude}&mlon=${point.longitude}#map=15/${point.latitude}/${point.longitude}`}
             target="_blank"
             rel="noreferrer"
-            className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-zinc-900/80 px-3 py-1 text-xs font-medium text-white backdrop-blur-xs transition hover:bg-zinc-900"
+            className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-[#d6e2c4] bg-white/95 px-3 py-1 text-xs font-semibold text-[#124e3b] shadow-xs backdrop-blur-xs transition hover:bg-[#f4f8ed]"
           >
             Open pickup map
             <ExternalLink className="size-3" aria-hidden="true" />
