@@ -83,31 +83,66 @@ export function AiKitModal({
     }
   }, [catalog, api]);
 
+  const runKitGeneration = async (queryText: string) => {
+    const textToRun = queryText.trim() || "Solo outdoor vlog / YouTube video, budget ฿2,800";
+    setIsAnalyzing(true);
+
+    let itemsToUse = activeCatalog;
+    if (!itemsToUse || itemsToUse.length === 0) {
+      try {
+        itemsToUse = await api.listItems();
+        setActiveCatalog(itemsToUse);
+      } catch {
+        itemsToUse = [];
+      }
+    }
+
+    try {
+      const res = await fetch("/api/ai-kit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: textToRun, items: itemsToUse }),
+      });
+      if (res.ok) {
+        const kit = (await res.json()) as SmartKitResult;
+        setResult(kit);
+        setIsAnalyzing(false);
+        return;
+      }
+    } catch {
+      // Fallback to local engine below
+    }
+
+    const kit = generateSmartKit(textToRun, itemsToUse);
+    setResult(kit);
+    setIsAnalyzing(false);
+  };
+
   // Synchronize and auto-load on open so modal is never blank
   useEffect(() => {
     if (!isOpen) return;
 
     const trimmed = initialPrompt.trim();
-    const queryToRun = trimmed || "Solo outdoor vlog / YouTube video, budget ฿800";
-    setPrompt(trimmed ? trimmed : "Solo outdoor vlog / YouTube video, budget ฿800");
+    const defaultQuery = "Solo outdoor vlog / YouTube video, budget ฿2,800";
+    const queryToRun = trimmed || defaultQuery;
+    setPrompt(queryToRun);
 
-    void (async () => {
-      let itemsToUse = activeCatalog;
-      if (!itemsToUse || itemsToUse.length === 0) {
-        try {
-          itemsToUse = await api.listItems();
-          setActiveCatalog(itemsToUse);
-        } catch {
-          itemsToUse = [];
+    if (trimmed) {
+      void runKitGeneration(queryToRun);
+    } else {
+      void (async () => {
+        let itemsToUse = activeCatalog;
+        if (!itemsToUse || itemsToUse.length === 0) {
+          try {
+            itemsToUse = await api.listItems();
+            setActiveCatalog(itemsToUse);
+          } catch {
+            itemsToUse = [];
+          }
         }
-      }
-      setIsAnalyzing(true);
-      setTimeout(() => {
-        const kit = generateSmartKit(queryToRun, itemsToUse);
-        setResult(kit);
-        setIsAnalyzing(false);
-      }, 200);
-    })();
+        setResult(generateSmartKit(queryToRun, itemsToUse));
+      })();
+    }
   }, [isOpen, initialPrompt]);
 
   // Handle ESC key
@@ -122,24 +157,7 @@ export function AiKitModal({
   }, [isOpen, onClose]);
 
   const handleGenerate = async (queryText: string) => {
-    const textToRun = queryText.trim() || "Solo outdoor vlog / YouTube video, budget ฿800";
-    setIsAnalyzing(true);
-
-    let itemsToUse = activeCatalog;
-    if (!itemsToUse || itemsToUse.length === 0) {
-      try {
-        itemsToUse = await api.listItems();
-        setActiveCatalog(itemsToUse);
-      } catch {
-        itemsToUse = [];
-      }
-    }
-
-    setTimeout(() => {
-      const kit = generateSmartKit(textToRun, itemsToUse);
-      setResult(kit);
-      setIsAnalyzing(false);
-    }, 200);
+    await runKitGeneration(queryText);
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
