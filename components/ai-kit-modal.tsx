@@ -8,10 +8,15 @@ import {
   ExternalLink,
   Layers,
   Loader2,
+  Mic,
   RotateCcw,
+  Square,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useData } from "@/components/data-provider";
 import { ItemImage } from "@/components/item-image";
 import { Button } from "@/components/ui/button";
@@ -61,11 +66,43 @@ export function AiKitModal({
   const [prompt, setPrompt] = useState(initialPrompt);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<SmartKitResult | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const stopAudioPlayback = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.currentTime = 0;
+      audioPlayerRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+    setIsLoadingAudio(false);
+  };
+
+  // Stop audio and recording when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      stopAudioPlayback();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    }
+  }, [isOpen]);
 
   // Sync catalog prop or fetch if empty
   useEffect(() => {
@@ -84,6 +121,7 @@ export function AiKitModal({
   }, [catalog, api]);
 
   const runKitGeneration = async (queryText: string) => {
+    stopAudioPlayback();
     const textToRun = queryText.trim() || "Solo outdoor vlog / YouTube video, budget ฿2,800";
     setIsAnalyzing(true);
 
@@ -116,6 +154,122 @@ export function AiKitModal({
     const kit = generateSmartKit(textToRun, itemsToUse);
     setResult(kit);
     setIsAnalyzing(false);
+  };
+
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    try {
+      stopAudioPlayback();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (audioBlob.size === 0) return;
+
+        setIsTranscribing(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", audioBlob, "voice.webm");
+          const res = await fetch("/api/elevenlabs/stt", {
+            method: "POST",
+            body: formData,
+          });
+          if (res.ok) {
+            const data = (await res.json()) as { text?: string };
+            const spokenText = (data.text ?? "").trim();
+            if (spokenText) {
+              setPrompt(spokenText);
+              toast.success("Transcribed with ElevenLabs Scribe");
+              void runKitGeneration(spokenText);
+            } else {
+              toast.error("Could not hear speech clearly. Please try again.");
+            }
+          } else {
+            toast.error("Voice transcription failed. Please try again.");
+          }
+        } catch {
+          toast.error("Could not connect to ElevenLabs Speech-to-Text.");
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch {
+      toast.error("Microphone permission is required for voice search.");
+    }
+  };
+
+  const handleListenToAdvice = async () => {
+    if (!result) return;
+    if (isSpeaking || isLoadingAudio) {
+      stopAudioPlayback();
+      return;
+    }
+
+    const totalBaht = Math.round(result.totalDailyPriceSatang / 100);
+    const itemTitles = result.items.map((i) => i.title).join(", ");
+    const speechScript = `${result.kitName}. ${result.description} This bundle includes: ${itemTitles}. Total daily rate is ${totalBaht} baht. ${result.reasons.join(" ")}`;
+
+    setIsLoadingAudio(true);
+    try {
+      const res = await fetch("/api/elevenlabs/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: speechScript }),
+      });
+
+      if (!res.ok) {
+        throw new Error("ElevenLabs TTS request failed");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioPlayerRef.current = audio;
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+
+      setIsLoadingAudio(false);
+      setIsSpeaking(true);
+      await audio.play();
+    } catch {
+      setIsLoadingAudio(false);
+      // Graceful browser speech fallback if offline
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(speechScript);
+        utterance.onend = () => setIsSpeaking(false);
+        setIsSpeaking(true);
+        window.speechSynthesis.speak(utterance);
+      } else {
+        toast.error("Could not play AI voice right now.");
+      }
+    }
   };
 
   // Synchronize and auto-load on open so modal is never blank
@@ -197,11 +351,16 @@ export function AiKitModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#e8eee0] px-5 py-4 bg-[#fbfcf9]">
           <div>
-            <h2 id="ai-kit-title" className="text-base font-semibold leading-none text-[#1b2b22]">
-              Brollow AI · Smart Kit Builder
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 id="ai-kit-title" className="text-base font-semibold leading-none text-[#1b2b22]">
+                Brollow AI · Smart Kit Builder
+              </h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#e3edc8] px-2 py-0.5 text-[10px] font-semibold text-[#124e3b] border border-[#d2deba]">
+                Voice by ElevenLabs
+              </span>
+            </div>
             <p className="text-xs text-[#5f6e65] mt-1">
-              Describe your project. AI curates and bundles the right equipment within your budget.
+              Type or speak your project needs. AI curates and narrates the right equipment bundle.
             </p>
           </div>
           <button
@@ -216,7 +375,7 @@ export function AiKitModal({
 
         {/* Scrollable Content */}
         <div className="overflow-y-auto p-5 space-y-4">
-          {/* Natural Language Prompt Input */}
+          {/* Natural Language & Voice Prompt Input */}
           <form onSubmit={handleFormSubmit} className="space-y-3">
             <div className="relative flex items-center">
               <input
@@ -224,24 +383,55 @@ export function AiKitModal({
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g. Shooting a 2-person indoor interview, budget ฿1,200 / day"
-                className="w-full h-11 pl-4 pr-32 rounded-xl border border-[#d8e0ce] bg-white text-sm text-[#1b2b22] placeholder:text-[#88968d] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                placeholder="Speak or type, e.g. ถ่าย Vlog นอกสถานที่ งบ 2,500 บาท"
+                className="w-full h-11 pl-4 pr-44 rounded-xl border border-[#d8e0ce] bg-white text-sm text-[#1b2b22] placeholder:text-[#88968d] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
               />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isAnalyzing}
-                className="absolute right-1.5 h-8 px-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg flex items-center gap-1.5 shadow-xs"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="size-3.5 animate-spin" />
-                    <span>Searching...</span>
-                  </>
-                ) : (
-                  <span>Generate Kit</span>
-                )}
-              </Button>
+              <div className="absolute right-1.5 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void handleToggleRecording()}
+                  disabled={isTranscribing || isAnalyzing}
+                  title={isRecording ? "Stop recording" : "Speak with ElevenLabs Voice Search"}
+                  className={`h-8 px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer border ${
+                    isRecording
+                      ? "bg-red-50 text-red-700 border-red-300 animate-pulse"
+                      : "bg-[#f4f7ee] text-[#124e3b] border-[#d2deba] hover:bg-[#e3edc8]"
+                  }`}
+                >
+                  {isTranscribing ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Scribe...</span>
+                    </>
+                  ) : isRecording ? (
+                    <>
+                      <Square className="size-3 fill-red-600 text-red-600" />
+                      <span>Stop</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="size-3.5" />
+                      <span className="hidden sm:inline">Voice</span>
+                    </>
+                  )}
+                </button>
+
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isAnalyzing || isTranscribing}
+                  className="h-8 px-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg flex items-center gap-1.5 shadow-xs"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Searching...</span>
+                    </>
+                  ) : (
+                    <span>Generate Kit</span>
+                  )}
+                </Button>
+              </div>
             </div>
 
             {/* Quick Inspiration Chips */}
@@ -281,9 +471,37 @@ export function AiKitModal({
               <div className="rounded-xl border border-[#d5e0be] bg-[#f4f8ed] p-4 space-y-2.5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#124e3b] bg-[#e3edc8] border border-[#d2deba] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Recommended Bundle
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#124e3b] bg-[#e3edc8] border border-[#d2deba] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Recommended Bundle
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void handleListenToAdvice()}
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                          isSpeaking
+                            ? "bg-[#124e3b] text-white border-[#124e3b]"
+                            : "bg-white text-[#124e3b] border-[#c5d4a7] hover:bg-[#e3edc8]"
+                        }`}
+                      >
+                        {isLoadingAudio ? (
+                          <>
+                            <Loader2 className="size-3 animate-spin" />
+                            <span>Generating Voice...</span>
+                          </>
+                        ) : isSpeaking ? (
+                          <>
+                            <VolumeX className="size-3.5" />
+                            <span>Stop AI Voice</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="size-3.5" />
+                            <span>Listen to AI Advice</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <h3 className="text-base font-bold text-[#153426] mt-1.5">
                       {result.kitName}
                     </h3>
