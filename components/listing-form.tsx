@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { errorMessage, useData } from "@/components/data-provider";
 import { ItemImage } from "@/components/item-image";
 import { Button } from "@/components/ui/button";
+import { LocationAutocomplete } from "@/components/location-autocomplete";
 import { CATEGORIES, CONDITIONS } from "@/lib/categories";
 import { MAX_PHOTOS, photoError, validateListing, type ListingErrors } from "@/lib/domain/listing";
 import { resolveItemCoordinates } from "@/lib/domain/location";
@@ -156,15 +157,31 @@ export function ListingForm({ existing }: { existing?: Item }) {
             placeholder="450" className={cn(input, "h-11")} aria-invalid={Boolean(errors.dailyPrice)} aria-describedby={describedBy("dailyPrice")} />
           {fieldError("dailyPrice")}
         </label>
-        <label className="block space-y-1.5">
+        <div className="block space-y-1.5">
           <span className="text-sm font-medium">Location</span>
-          <input id="field-location" value={values.location} onChange={(e) => set("location", e.target.value)} maxLength={80}
-            placeholder="e.g. Sukhumvit, Bangkok" className={cn(input, "h-11")} aria-invalid={Boolean(errors.location)} aria-describedby={describedBy("location")} />
+          <LocationAutocomplete
+            value={values.location}
+            coordinates={
+              values.pickupLatitude && values.pickupLongitude
+                ? {
+                    latitude: parseFloat(values.pickupLatitude),
+                    longitude: parseFloat(values.pickupLongitude),
+                  }
+                : null
+            }
+            onChange={(loc) => set("location", loc)}
+            onCoordinatesChange={(coords) => {
+              set("pickupLatitude", coords ? String(coords.latitude) : "");
+              set("pickupLongitude", coords ? String(coords.longitude) : "");
+            }}
+            placeholder="Search area, landmark, BTS station (e.g. Siam, Sukhumvit)"
+            hasError={Boolean(errors.location)}
+          />
           <span className="block text-xs text-muted-foreground">
-            An approximate neighborhood map &amp; radius zone will be generated automatically.
+            Type to search landmarks, stations, or tap &ldquo;Use current location&rdquo;.
           </span>
           {fieldError("location")}
-        </label>
+        </div>
       </div>
 
       <fieldset className="space-y-1.5">
