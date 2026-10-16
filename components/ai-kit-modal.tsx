@@ -377,24 +377,24 @@ export function AiKitModal({
         <div className="overflow-y-auto p-5 space-y-4">
           {/* Natural Language & Voice Prompt Input */}
           <form onSubmit={handleFormSubmit} className="space-y-3">
-            <div className="relative flex items-center">
+            <div className="flex items-center gap-1.5 rounded-xl border border-[#d8e0ce] bg-white pl-3.5 pr-1.5 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 shadow-xs">
               <input
                 ref={inputRef}
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Speak or type, e.g. ถ่าย Vlog นอกสถานที่ งบ 2,500 บาท"
-                className="w-full h-11 pl-4 pr-44 rounded-xl border border-[#d8e0ce] bg-white text-sm text-[#1b2b22] placeholder:text-[#88968d] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                className="min-w-0 flex-1 h-8 bg-transparent text-sm text-[#1b2b22] placeholder:text-[#88968d] outline-none"
               />
-              <div className="absolute right-1.5 flex items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => void handleToggleRecording()}
                   disabled={isTranscribing || isAnalyzing}
                   title={isRecording ? "Stop recording" : "Speak with ElevenLabs Voice Search"}
-                  className={`h-8 px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer border ${
+                  className={`h-8 px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer border ${
                     isRecording
-                      ? "bg-red-50 text-red-700 border-red-300 animate-pulse"
+                      ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
                       : "bg-[#f4f7ee] text-[#124e3b] border-[#d2deba] hover:bg-[#e3edc8]"
                   }`}
                 >
