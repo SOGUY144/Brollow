@@ -227,7 +227,12 @@ export function AiKitModal({
 
     const totalBaht = Math.round(result.totalDailyPriceSatang / 100);
     const itemTitles = result.items.map((i) => i.title).join(", ");
-    const speechScript = `${result.kitName}. ${result.description} This bundle includes: ${itemTitles}. Total daily rate is ${totalBaht} baht. ${result.reasons.join(" ")}`;
+    const isThai = /[\u0E00-\u0E7F]/.test(
+      `${prompt} ${result.kitName} ${result.description} ${result.reasons.join(" ")}`
+    );
+    const speechScript = isThai
+      ? `ชุดอุปกรณ์ที่แนะนำคือ ${result.kitName}. ${result.description} ในชุดประกอบด้วย ${itemTitles}. ราคารวมทั้งหมดวันละ ${totalBaht} บาท. ${result.reasons.join(" ")}`
+      : `${result.kitName}. ${result.description} This bundle includes: ${itemTitles}. Total daily rate is ${totalBaht} baht. ${result.reasons.join(" ")}`;
 
     setIsLoadingAudio(true);
     try {

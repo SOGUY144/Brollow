@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-// Default natural multilingual voice (Rachel / Sarah - supports 32 languages in eleven_multilingual_v2)
+// Default natural multilingual voice
 const DEFAULT_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 
 export async function POST(req: Request) {
@@ -24,6 +24,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Text is required" }, { status: 400 });
   }
 
+  // Detect Thai characters to pass explicit language_code for native Thai pronunciation
+  const hasThai = /[\u0E00-\u0E7F]/.test(text);
+
   try {
     const res = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${DEFAULT_VOICE_ID}?output_format=mp3_44100_128`,
@@ -36,9 +39,10 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           text: text.slice(0, 1200),
-          model_id: "eleven_multilingual_v2",
+          model_id: "eleven_v4_turbo",
+          language_code: hasThai ? "th" : "en",
           voice_settings: {
-            stability: 0.5,
+            stability: 0.55,
             similarity_boost: 0.75,
           },
         }),
